@@ -154,6 +154,11 @@ jobs:
     permissions:
       contents: write
     steps:
+      # The whole history and tags, for the commit list.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -162,11 +167,31 @@ jobs:
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS.txt
 
+      # The commits since the previous tag (all of them for the first release),
+      # one line each: title and a link to the commit.
+      - name: Release notes
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          if PREV=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null); then
+            RANGE="$PREV..$TAG"
+          else
+            RANGE="$TAG"
+          fi
+          URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/commit"
+          {
+            echo "## Commits"
+            echo
+            git log --no-merges --format="- %s ([%h]($URL/%H))" "$RANGE"
+          } > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           flags=()
           [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease)
+          # --generate-notes adds the "Full Changelog" compare link (and any PRs) below.
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes "${flags[@]}"
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --notes-file "$RUNNER_TEMP/notes.md" --generate-notes "${flags[@]}"
