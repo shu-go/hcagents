@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -66,6 +67,8 @@ type AgentService struct {
 	meta    map[string]termMeta // terminal -> details from `hc get`
 	cssMod  time.Time
 	refresh chan struct{}
+
+	startMu sync.Mutex // one Herdr start (and wait) at a time
 }
 
 type termMeta struct {
@@ -90,25 +93,41 @@ func NewAgentService(cfg *config.Config) *AgentService {
 }
 
 func (s *AgentService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
-	go func() {
-		if s.cfg.StartHerdr {
-			s.startHerdr(ctx)
-		}
-		s.loop(ctx)
-	}()
+	if s.cfg.StartHerdr {
+		go s.startHerdr(ctx) // the list shows the core's agents meanwhile
+	}
+	go s.loop(ctx)
 	return nil
 }
 
-// startHerdr starts Herdr's window if it isn't running yet.
+// herdrStartTimeout is how long to wait for a Herdr we started to answer.
+const herdrStartTimeout = 15 * time.Second
+
+// startHerdr starts Herdr's window if it isn't running yet, and waits until it answers.
 func (s *AgentService) startHerdr(ctx context.Context) {
+	if err := s.ensureHerdr(ctx); err != nil {
+		log.Println(err)
+	}
+}
+
+// ensureHerdr starts Herdr's window when it isn't running and waits until it
+// answers. One at a time: a click while Herdr is starting waits for that start.
+func (s *AgentService) ensureHerdr(ctx context.Context) error {
+	s.startMu.Lock()
+	defer s.startMu.Unlock()
 	started, err := s.client.Start(ctx)
 	if err != nil {
-		log.Printf("start herdr-app: %v", err)
-		return
+		return fmt.Errorf("start herdr-app: %w", err)
 	}
-	if started {
-		log.Println("started herdr-app")
+	if !started {
+		return nil
 	}
+	log.Println("started herdr-app")
+	if err := s.client.WaitReady(ctx, herdrStartTimeout); err != nil {
+		return err
+	}
+	s.Refresh()
+	return nil
 }
 
 func (s *AgentService) loop(ctx context.Context) {
@@ -511,14 +530,24 @@ func (s *AgentService) Agents() Snapshot {
 
 // Focus shows the agent in Herdr: its space and tab, or a peek for a sub-agent.
 // Then (Windows only, for now) it brings Herdr's window to the front.
+// When Herdr's window isn't running, it starts it first.
 func (s *AgentService) Focus(terminal string) error {
-	if err := s.client.Do(context.Background(), "agent.focus", map[string]any{"terminal": terminal}); err != nil {
+	ctx := context.Background()
+	focus := func() error {
+		return s.client.Do(ctx, "agent.focus", map[string]any{"terminal": terminal})
+	}
+	if err := focus(); err == nil {
+		if err := s.client.RaiseWindow(); err != nil {
+			log.Println("raise Herdr:", err)
+		}
+		return nil
+	}
+	// Herdr's window may not be running: start it (it comes up in front), then try again.
+	// The core's terminal addresses are the ones herdr-app uses, so they work as they are.
+	if err := s.ensureHerdr(ctx); err != nil {
 		return err
 	}
-	if err := s.client.RaiseWindow(); err != nil {
-		log.Println("raise Herdr:", err)
-	}
-	return nil
+	return focus()
 }
 
 // Icon returns the picture for an AgentView's Icon key as a data: URL, taken from

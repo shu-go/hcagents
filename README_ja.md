@@ -55,7 +55,7 @@ Task を使わずに `go build -ldflags "-H windowsgui" .`(Windows)や `go build
 - **タイトルバー**: ドラッグで移動。⟳ ですぐに更新、× でウィンドウを隠す
 - **トレイアイコン**: クリックで表示 / 非表示。メニューには Show / Hide、Always on top、Refresh、Quit があります。
 
-Herdr のウィンドウが起動していないときも、herdr-core からエージェントの一覧を表示します(タイトルバーに「core」、一覧の上に注意書きが出ます)。ただし切り替え先のウィンドウがないため、行はクリックできません。
+Herdr のウィンドウが起動していないときも、herdr-core からエージェントの一覧を表示します(タイトルバーに「core」、一覧の上に注意書きが出ます)。このとき行をクリックすると Herdr を起動し、起動を待ってからそのエージェントに切り替えます。ピン留めは Herdr のウィンドウが起動しているときだけ使えます。
 
 ## 設定
 
@@ -95,7 +95,7 @@ macOS で Finder から起動したアプリには、シェルの `PATH` や `HE
   .group.is-pinned | .is-blocked | .is-done | .is-working | .is-idle
     .group-title (.group-name .group-count)
     .agent-item.is-<status> [.is-collapsed]
-      .agent.is-<status> [.is-disabled] [.is-pinned]
+      .agent.is-<status> [.is-starting] [.is-pinned]
         .agent-icon .agent-name .agent-place .agent-toggle .agent-pin .agent-elapsed .agent-status
       .subagents
         .subagent-item.is-<status>

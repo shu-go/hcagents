@@ -64,7 +64,8 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Refresh and Quit
 
 When Herdr's window isn't running, hcagents still lists the agents from herdr-core
-(the title bar shows "core", with a note above the list), but rows can't be clicked: there is no window to switch.
+(the title bar shows "core", with a note above the list). Clicking a row then
+starts Herdr and, once it is up, switches to that agent. Pinning needs Herdr's window.
 
 ## Configuration
 
@@ -109,7 +110,7 @@ at the top of that file describes the structure; in short:
   .group.is-pinned | .is-blocked | .is-done | .is-working | .is-idle
     .group-title (.group-name .group-count)
     .agent-item.is-<status> [.is-collapsed]
-      .agent.is-<status> [.is-disabled] [.is-pinned]
+      .agent.is-<status> [.is-starting] [.is-pinned]
         .agent-icon .agent-name .agent-place .agent-toggle .agent-pin .agent-elapsed .agent-status
       .subagents
         .subagent-item.is-<status>

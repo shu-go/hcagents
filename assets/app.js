@@ -119,19 +119,34 @@ function showError(e) {
   $message.textContent = String(e?.message ?? e);
 }
 
-function focusOnClick($row, terminal, canFocus) {
-  if (!canFocus) {
-    $row.classList.add("is-disabled");
-    return;
-  }
+// starting: the terminal clicked while Herdr wasn't running, until Herdr is up
+// and shows it (Focus starts Herdr first, which takes a few seconds).
+let starting = null;
+
+function focusOnClick($row, terminal) {
+  if (starting === terminal) $row.classList.add("is-starting");
   $row.addEventListener("click", (ev) => {
     ev.stopPropagation();
-    call("Focus", terminal).catch(showError);
+    const wasCore = last?.source === "core";
+    if (wasCore) {
+      starting = terminal;
+      render(last);
+    }
+    const done = () => {
+      if (wasCore && starting === terminal) {
+        starting = null;
+        render(last);
+      }
+    };
+    call("Focus", terminal).then(done, (e) => {
+      done();
+      showError(e); // after render, so the message stays
+    });
   });
 }
 
 // renderChildren draws sub-agents (recursively) as a tree.
-function renderChildren(children, canFocus) {
+function renderChildren(children) {
   const $list = el("div", "subagents");
   for (const c of children) {
     const status = c.status || "none";
@@ -144,17 +159,18 @@ function renderChildren(children, canFocus) {
       el("span", "subagent-name", c.name || c.app || c.terminal),
       el("span", "subagent-status"),
     );
-    focusOnClick($row, c.terminal, canFocus);
+    focusOnClick($row, c.terminal);
     $item.append($row);
     if (c.children && c.children.length) {
-      $item.append(renderChildren(c.children, canFocus));
+      $item.append(renderChildren(c.children));
     }
     $list.append($item);
   }
   return $list;
 }
 
-function renderAgent(a, now, canFocus) {
+// canPin: pinning goes through Herdr's window, so only while it runs.
+function renderAgent(a, now, canPin) {
   const $item = el("div", `agent-item is-${a.status}`);
   const $row = el("div", `agent is-${a.status}`);
   $row.dataset.terminal = a.terminal;
@@ -179,7 +195,7 @@ function renderAgent(a, now, canFocus) {
     $row.append($toggle);
   }
   // Shown on hover in place of the elapsed time (CSS), like Herdr's pin button.
-  if (canFocus) {
+  if (canPin) {
     const $pin = el("button", "agent-pin");
     $pin.innerHTML = a.pinned ? PIN_OFF_SVG : PIN_SVG;
     $pin.title = a.pinned ? "Unpin" : "Pin to the top";
@@ -190,10 +206,10 @@ function renderAgent(a, now, canFocus) {
     $row.append($pin);
   }
   $row.append(el("span", "agent-elapsed", elapsed(a.sinceMs, now)), el("span", "agent-status"));
-  focusOnClick($row, a.terminal, canFocus);
+  focusOnClick($row, a.terminal);
 
   $item.append($row);
-  if (hasChildren) $item.append(renderChildren(a.children, canFocus));
+  if (hasChildren) $item.append(renderChildren(a.children));
   return $item;
 }
 
@@ -204,14 +220,16 @@ function render(snap) {
   $message.classList.toggle("is-error", !!snap.error);
   if (snap.error) {
     $message.textContent = snap.error;
+  } else if (starting) {
+    $message.textContent = "Starting Herdr…";
   } else if (snap.source === "core") {
-    $message.textContent = "Herdr is not running: click does nothing";
+    $message.textContent = "Herdr is not running: click an agent to start it";
   } else {
     $message.textContent = "";
   }
   $source.textContent = snap.source === "core" ? "core" : "";
 
-  const canFocus = snap.source === "app";
+  const canPin = snap.source === "app";
   const agents = snap.agents || [];
   const groups = [];
   const addGroup = (className, label, list) => {
@@ -220,7 +238,7 @@ function render(snap) {
     const $title = el("div", "group-title");
     $title.append(el("span", "group-name", label), el("span", "group-count", String(list.length)));
     $group.append($title);
-    for (const a of list) $group.append(renderAgent(a, now, canFocus));
+    for (const a of list) $group.append(renderAgent(a, now, canPin));
     groups.push($group);
   };
   // Pinned agents first, in their own group (as Herdr does).

@@ -10,7 +10,7 @@
         .group.is-pinned | .is-blocked | .is-done | .is-working | .is-idle
           .group-title (.group-name .group-count)
           .agent-item.is-<status> [.is-collapsed]
-            .agent.is-<status> [.is-disabled] [.is-pinned]
+            .agent.is-<status> [.is-starting] [.is-pinned]
               .agent-icon   (data-app="claude-code" ..., data-icon="claude" ..., .is-shell)
                             Herdr's icon, once loaded: .has-image plus
                             .is-tint     > .icon-glyph  (one-color: drawn in `color`)
@@ -24,7 +24,7 @@
               .agent-status
             .subagents                       (sub-agents, drawn as a tree)
               .subagent-item.is-<status>     (status "none": not an agent, e.g. a shell)
-                .subagent.is-<status> [.is-disabled]
+                .subagent.is-<status> [.is-starting]
                   .subagent-icon (as .agent-icon) .subagent-name .subagent-status
                 .subagents                   (their own sub-agents, nested)
 */
@@ -127,7 +127,8 @@ html, body {
   cursor: pointer;
 }
 .agent:hover { background: var(--color-hover); }
-.agent.is-disabled { cursor: default; }
+/* clicked while Herdr wasn't running: until Herdr is up and shows it */
+.agent.is-starting { cursor: progress; background: var(--color-hover); }
 
 .agent-icon {
   width: 18px;
@@ -237,7 +238,7 @@ html, body {
   cursor: pointer;
 }
 .subagent:hover { background: var(--color-hover); }
-.subagent.is-disabled { cursor: default; }
+.subagent.is-starting { cursor: progress; background: var(--color-hover); }
 
 .subagent-icon {
   width: 16px;
