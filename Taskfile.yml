@@ -1,0 +1,150 @@
+# hcagents build tasks (https://taskfile.dev, v3).
+#
+#   task            build for this OS (same as `task build`)
+#   task run        build and start
+#   task check      gofmt + go vet
+#   task navcheck   check which herdr-app command switches space/tab
+#   task clean
+#
+# Each OS builds for itself: macOS and Linux need cgo (WebKit), so no cross builds.
+# Output goes to bin/. Put hcagents.yaml next to the executable (or in the user
+# config folder) to configure it; see hcagents.example.yaml.
+
+version: "3"
+
+vars:
+  APP: hcagents
+  BIN: bin
+  # -s -w: smaller binary without debug info (use `go run .` to debug).
+  LDFLAGS_BASE: -s -w
+
+tasks:
+  default:
+    cmds:
+      - task: build
+
+  build:
+    desc: Build for this OS
+    cmds:
+      - task: build:{{OS}}
+
+  icons:
+    desc: Make build/windows/icon.ico and build/darwin/icons.icns from build/appicon.png (needs wails3)
+    sources:
+      - build/appicon.png
+    generates:
+      - build/windows/icon.ico
+      - build/darwin/icons.icns
+    cmds:
+      # appicon.png is 48px: no larger .ico sizes, they would only be blurry upscales.
+      - wails3 generate icons -input build/appicon.png -sizes "48,32,16" -windowsfilename build/windows/icon.ico -macfilename build/darwin/icons.icns
+
+  syso:
+    desc: Make the Windows resource (exe icon, manifest, version info) that go build links in (needs wails3)
+    platforms: [windows]
+    deps: [icons]
+    sources:
+      - build/windows/icon.ico
+      - build/windows/wails.exe.manifest
+      - build/windows/info.json
+    generates:
+      - "{{.APP}}_windows_{{ARCH}}.syso"
+    cmds:
+      - wails3 generate syso -arch {{ARCH}} -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out {{.APP}}_windows_{{ARCH}}.syso
+
+  build:windows:
+    desc: "Build bin/hcagents.exe (GUI subsystem: no console window)"
+    platforms: [windows]
+    deps: [syso]
+    sources: &sources
+      - "**/*.go"
+      - "*.syso"
+      - assets/**/*
+      - build/appicon.png
+      - go.mod
+      - go.sum
+    generates:
+      - "{{.BIN}}/{{.APP}}.exe"
+    env:
+      CGO_ENABLED: "0"
+    cmds:
+      - go build -trimpath -ldflags="{{.LDFLAGS_BASE}} -H windowsgui" -o {{.BIN}}/{{.APP}}.exe .
+
+  build:darwin:
+    desc: Build bin/hcagents.app (a tray app without a Dock icon)
+    platforms: [darwin]
+    deps: [icons]
+    sources: *sources
+    generates:
+      - "{{.BIN}}/{{.APP}}.app/Contents/MacOS/{{.APP}}"
+    env:
+      CGO_ENABLED: "1"
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    vars:
+      CONTENTS: "{{.BIN}}/{{.APP}}.app/Contents"
+    cmds:
+      - mkdir -p "{{.CONTENTS}}/MacOS" "{{.CONTENTS}}/Resources"
+      - go build -trimpath -ldflags="{{.LDFLAGS_BASE}}" -o "{{.CONTENTS}}/MacOS/{{.APP}}" .
+      - cp build/darwin/Info.plist "{{.CONTENTS}}/Info.plist"
+      - cp build/darwin/icons.icns "{{.CONTENTS}}/Resources/icons.icns"
+      # Ad-hoc signature, so Gatekeeper lets a local build run.
+      - codesign --force --deep --sign - "{{.BIN}}/{{.APP}}.app"
+
+  build:linux:
+    desc: Build bin/hcagents (needs gtk3 and webkit2gtk-4.1 dev packages)
+    platforms: [linux]
+    sources: *sources
+    generates:
+      - "{{.BIN}}/{{.APP}}"
+    env:
+      CGO_ENABLED: "1"
+    cmds:
+      - go build -trimpath -ldflags="{{.LDFLAGS_BASE}}" -o {{.BIN}}/{{.APP}} .
+
+  run:
+    desc: Build and start
+    cmds:
+      - task: build
+      - task: run:{{OS}}
+
+  run:windows:
+    internal: true
+    platforms: [windows]
+    cmds:
+      # Through explorer, so the window opens normally even from a hidden shell.
+      - cmd: explorer.exe "{{.ROOT_DIR}}\{{.BIN}}\{{.APP}}.exe"
+        ignore_error: true # explorer.exe exits 1 even when it worked
+
+  run:darwin:
+    internal: true
+    platforms: [darwin]
+    cmds:
+      - open "{{.BIN}}/{{.APP}}.app"
+
+  run:linux:
+    internal: true
+    platforms: [linux]
+    cmds:
+      - "{{.BIN}}/{{.APP}} &"
+
+  check:
+    desc: gofmt and go vet
+    cmds:
+      # fails (and lists the files) when something isn't gofmt'ed
+      - 'out="$(gofmt -l .)"; if [ -n "$out" ]; then echo "not gofmt-ed:"; echo "$out"; exit 1; fi'
+      - go vet ./...
+
+  test:
+    desc: go test
+    cmds:
+      - go test ./...
+
+  navcheck:
+    desc: Check which herdr-app command switches to each agent's space/tab
+    cmds:
+      - go run ./cmd/navcheck {{.CLI_ARGS}}
+
+  clean:
+    desc: Remove build output
+    cmds:
+      - cmd: '{{if eq OS "windows"}}powershell -NoProfile -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue {{.BIN}}"{{else}}rm -rf {{.BIN}}{{end}}'

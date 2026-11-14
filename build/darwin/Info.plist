@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>hcagents</string>
+  <key>CFBundleDisplayName</key>
+  <string>hcagents</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.github.shu-go.hcagents</string>
+  <key>CFBundleExecutable</key>
+  <string>hcagents</string>
+  <key>CFBundleIconFile</key>
+  <string>icons</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleVersion</key>
+  <string>0.1.0</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <!-- A tray app: no Dock icon, no menu bar of its own. -->
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>
