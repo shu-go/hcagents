@@ -22,11 +22,25 @@ func main() {
 
 	svc := NewAgentService(cfg)
 
+	// One hcagents at a time: a second start shows the running one's window and exits.
+	// Set before application.New, which is where a second instance hands over and
+	// exits: it lets the running one take the foreground (Windows).
+	allowForeground()
+	var win *application.WebviewWindow
 	app := application.New(application.Options{
 		Name:        "hcagents",
 		Description: "Herdr agents at a glance",
 		Icon:        appIcon,
-		Services:    []application.Service{application.NewService(svc)},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.github.shu-go.hcagents",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				if win != nil {
+					win.Show()
+					win.Focus()
+				}
+			},
+		},
+		Services: []application.Service{application.NewService(svc)},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
 		},
@@ -49,7 +63,7 @@ func main() {
 	}
 	statePath := cfg.StatePath()
 	applySavedBounds(statePath, &winOpts) // where it was last time
-	win := app.Window.NewWithOptions(winOpts)
+	win = app.Window.NewWithOptions(winOpts)
 	// Closing the window hides it; quit from the tray.
 	win.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
 		win.Hide()
