@@ -2,7 +2,10 @@
   hcagents built-in style.
   Override anything in your own CSS (hcagents.yaml: css: user.css).
 
+  Themes: :root holds the dark colors, :root[data-theme="light"] the light ones.
+
   Structure:
+    html[data-theme="light" | "dark"]
     .app
       .titlebar  (.titlebar-title .titlebar-source .titlebar-button)
       .message   (.is-error when something failed)
@@ -49,6 +52,26 @@
   --subrow-height: 26px;
   --tree-indent: 14px;
   --radius: 6px;
+
+  color-scheme: dark;
+}
+
+/* Light theme. <html data-theme> is "light" or "dark": the tray menu's choice,
+   or the system's for "System". Override light colors with :root[data-theme="light"]. */
+:root[data-theme="light"] {
+  --color-bg: #f7f7f8;
+  --color-fg: #1f1f22;
+  --color-muted: #6e6e73;
+  --color-hover: #e6e6e9;
+  --color-border: #d6d6db;
+
+  --color-blocked: #cf222e;
+  --color-done: #2f6fde;
+  --color-working: #9a6700;
+  --color-idle: #8a8a8e;
+  --color-tree: #c4c4ca;
+
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }

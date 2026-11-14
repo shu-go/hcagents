@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v3"
@@ -29,6 +30,8 @@ type Config struct {
 	// CSS is a user stylesheet loaded after the built-in one.
 	// A relative path is relative to the config file's folder.
 	CSS string `yaml:"css"`
+	// Theme is "system" (follow the OS), "light" or "dark". Set from the tray menu too.
+	Theme string `yaml:"theme"`
 
 	Window Window `yaml:"window"`
 
@@ -46,6 +49,7 @@ func Default() *Config {
 	return &Config{
 		StartHerdr: true,
 		Interval:   Duration(3 * time.Second),
+		Theme:      ThemeSystem,
 		Window: Window{
 			Width:       280,
 			Height:      360,
@@ -90,7 +94,23 @@ func Load() (*Config, error) {
 	if cfg.Interval <= 0 {
 		cfg.Interval = Default().Interval
 	}
+	cfg.Theme = NormalizeTheme(cfg.Theme)
 	return cfg, nil
+}
+
+const (
+	ThemeSystem = "system"
+	ThemeLight  = "light"
+	ThemeDark   = "dark"
+)
+
+// NormalizeTheme returns "light" or "dark" as they are (any case), else "system".
+func NormalizeTheme(s string) string {
+	switch t := strings.ToLower(strings.TrimSpace(s)); t {
+	case ThemeLight, ThemeDark:
+		return t
+	}
+	return ThemeSystem
 }
 
 // CSSPath resolves CSS against the config file's folder.

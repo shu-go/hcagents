@@ -53,7 +53,7 @@ Task を使わずに `go build -ldflags "-H windowsgui" .`(Windows)や `go build
 - **⌄**(サブエージェントがある行): サブエージェントを折りたたむ / 開く
 - **ピン**(マウスを乗せると経過時間の位置に出ます): ピン留め / 解除
 - **タイトルバー**: ドラッグで移動。⟳ ですぐに更新、× でウィンドウを隠す
-- **トレイアイコン**: クリックで表示 / 非表示。メニューには Show / Hide、Always on top、Refresh、Quit があります。
+- **トレイアイコン**: クリックで表示 / 非表示。メニューには Show / Hide、Always on top、Theme(System / Light / Dark)、Refresh、Quit があります。
 
 Herdr のウィンドウが起動していないときも、herdr-core からエージェントの一覧を表示します(タイトルバーに「core」、一覧の上に注意書きが出ます)。このとき行をクリックすると Herdr を起動し、起動を待ってからそのエージェントに切り替えます。ピン留めは Herdr のウィンドウが起動しているときだけ使えます。
 
@@ -76,6 +76,7 @@ herdr_home: ""    # Herdr のアプリフォルダ(アイコン用)。空なら 
 start_herdr: true # 起動時、Herdr が起動していなければ起動する
 interval: 3s      # 更新間隔
 css: user.css     # 自分のスタイルシート。このファイルからの相対パス。変更すると自動で再読み込み
+theme: system     # 配色。system(OS に合わせる)、light、dark。トレイメニューからも変えられる
 window:
   width: 280      # 初回起動時のサイズ
   height: 360
@@ -83,6 +84,8 @@ window:
 ```
 
 macOS で Finder から起動したアプリには、シェルの `PATH` や `HERDR_APP_HOME` が渡りません。`herdr_app`、`hc`、`herdr_home` を設定してください。
+
+トレイメニューでテーマを選ぶと、使用中の設定ファイルの `theme:` の行だけを書き換えます。設定ファイルがなければ、実行ファイルと同じフォルダに `hcagents.yaml` を作ります(そのフォルダに書き込めないときと macOS では、上の設定フォルダに作ります)。
 
 ウィンドウの位置とサイズは、`hcagents.yaml` と同じフォルダ(なければ上の設定フォルダ)の `state.yaml` に保存されます。消すと初期状態に戻ります。
 
@@ -103,15 +106,17 @@ macOS で Finder から起動したアプリには、シェルの `PATH` や `HE
           .subagents   (入れ子)
 ```
 
-色やサイズの多くは CSS 変数になっています。例:
+色やサイズの多くは CSS 変数になっています。`<html data-theme>` は `light` か `dark` で、ダークの色は `:root`、ライトの色は `:root[data-theme="light"]` にあります。例:
 
 ```css
 :root {
-  --color-bg: #ffffff;
-  --color-fg: #222222;
-  --color-working: #b8860b;
+  --color-working: #b8860b;   /* ダークテーマの色(とサイズ) */
   --font-size: 12px;
   --row-height: 26px;
+}
+:root[data-theme="light"] {
+  --color-bg: #ffffff;        /* ライトテーマの色 */
+  --color-fg: #222222;
 }
 
 /* 経過時間を隠す */

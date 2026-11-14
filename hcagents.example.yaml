@@ -4,6 +4,8 @@
 #   macOS:   ~/Library/Application Support/hcagents/hcagents.yaml
 #   Linux:   ~/.config/hcagents/hcagents.yaml
 # The first one found is used. Changes apply on restart (css: live).
+# hcagents writes to this file itself only for theme: (the tray menu).
+# With no file, it creates one next to the executable.
 
 # herdr-app and hc executables. Empty: looked up in PATH.
 # GUI apps on macOS don't get your shell's PATH, so set these there.
@@ -24,6 +26,10 @@ interval: 3s
 # Your stylesheet, loaded after the built-in one (assets/style.css).
 # Relative to this file's folder. Reloaded when it changes.
 css: ""
+
+# Colors: system (follow the OS), light or dark. Also set from the tray menu
+# (Theme), which saves the choice here.
+theme: system
 
 # Size on first start. After that the window opens where you left it
 # (saved in state.yaml next to this file; delete it to reset).

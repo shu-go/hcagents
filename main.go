@@ -98,6 +98,16 @@ func main() {
 		onTop = ctx.ClickedMenuItem().Checked()
 		win.SetAlwaysOnTop(onTop)
 	})
+	themeMenu := menu.AddSubmenu("Theme")
+	for _, t := range []struct{ label, value string }{
+		{"System", config.ThemeSystem},
+		{"Light", config.ThemeLight},
+		{"Dark", config.ThemeDark},
+	} {
+		themeMenu.AddRadio(t.label, cfg.Theme == t.value).OnClick(func(*application.Context) {
+			svc.SetTheme(t.value)
+		})
+	}
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) {

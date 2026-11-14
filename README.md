@@ -61,7 +61,7 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **⌄** (on rows with sub-agents): collapse or expand them
 - **Pin** (on hover, in place of the elapsed time): pin or unpin
 - **Title bar**: drag to move; ⟳ refreshes now; × hides the window
-- **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Refresh and Quit
+- **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Theme (System / Light / Dark), Refresh and Quit
 
 When Herdr's window isn't running, hcagents still lists the agents from herdr-core
 (the title bar shows "core", with a note above the list). Clicking a row then
@@ -87,6 +87,7 @@ herdr_home: ""    # Herdr's app folder (icons); empty: $HERDR_APP_HOME, else ~/.
 start_herdr: true # start Herdr on startup when it isn't running
 interval: 3s      # how often to refresh
 css: user.css     # your stylesheet, relative to this file; reloaded when it changes
+theme: system     # system (follow the OS), light or dark; also set from the tray menu
 window:
   width: 280      # size on first start
   height: 360
@@ -95,6 +96,9 @@ window:
 
 On macOS, apps started from Finder don't get your shell's `PATH` or `HERDR_APP_HOME`,
 so set `herdr_app`, `hc` and `herdr_home` there.
+
+Choosing a theme from the tray menu writes `theme:` to the config file in use, changing only that line.
+With no config file, hcagents creates `hcagents.yaml` next to the executable (or, when that folder can't be written, and on macOS, in the config folder above).
 
 The window's position and size are saved in `state.yaml`, next to `hcagents.yaml`
 (or in the config folder above). Delete it to reset.
@@ -118,15 +122,17 @@ at the top of that file describes the structure; in short:
           .subagents   (nested)
 ```
 
-Most colors and sizes are CSS variables, for example:
+Most colors and sizes are CSS variables. `<html data-theme>` is `light` or `dark`: the dark colors are on `:root`, the light ones on `:root[data-theme="light"]`. For example:
 
 ```css
 :root {
-  --color-bg: #ffffff;
-  --color-fg: #222222;
-  --color-working: #b8860b;
+  --color-working: #b8860b;   /* the dark theme's colors (and sizes) */
   --font-size: 12px;
   --row-height: 26px;
+}
+:root[data-theme="light"] {
+  --color-bg: #ffffff;        /* the light theme's colors */
+  --color-fg: #222222;
 }
 
 /* hide the elapsed time */

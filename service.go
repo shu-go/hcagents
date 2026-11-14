@@ -564,6 +564,27 @@ func (s *AgentService) Refresh() {
 	}
 }
 
+// Theme returns the color theme: "system", "light" or "dark".
+func (s *AgentService) Theme() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.Theme
+}
+
+// SetTheme switches the color theme now (the "theme" event) and saves it in the
+// config file (which is created next to the executable if there is none yet).
+func (s *AgentService) SetTheme(theme string) {
+	theme = config.NormalizeTheme(theme)
+	s.mu.Lock()
+	s.cfg.Theme = theme
+	err := s.cfg.SetValue("theme", theme)
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save theme:", err)
+	}
+	application.Get().Event.Emit("theme", theme)
+}
+
 // UserCSS returns the user's stylesheet ("" if none).
 func (s *AgentService) UserCSS() string {
 	p := s.cfg.CSSPath()

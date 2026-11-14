@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>hcagents</title>
+  <script>
+    // Start in the last theme before the first paint (app.js keeps it up to date).
+    try {
+      const t = localStorage.getItem("hcagents.theme") || "system";
+      document.documentElement.dataset.theme =
+        t === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : t;
+    } catch {}
+  </script>
   <link rel="stylesheet" href="/style.css">
   <style id="user-css"></style>
 </head>
