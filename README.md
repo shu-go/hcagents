@@ -8,7 +8,7 @@ work in other apps.
 
 ![hcagents: three idle agents, one with a sub-agent](screenshot.png)
 
-- Lists every agent Herdr knows, grouped as **Pinned / Blocked / Done / Working / Idle**,
+- Lists every agent Herdr knows, grouped as **Pinned / Needs you (blocked) / Done / Working / Idle**,
   in the same order as Herdr (most urgent first, then the most recent change)
 - Shows each agent's space, machine (for remote ones) and the same detail Herdr
   shows: a named tab, or the agent's title

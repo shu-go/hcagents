@@ -4,7 +4,7 @@ const SERVICE = "main.AgentService";
 const call = (method, ...args) => wails.Call.ByName(`${SERVICE}.${method}`, ...args);
 
 const GROUPS = [
-  { status: "blocked", label: "Blocked" },
+  { status: "blocked", label: "Needs you" },
   { status: "done", label: "Done" },
   { status: "working", label: "Working" },
   { status: "idle", label: "Idle" },
