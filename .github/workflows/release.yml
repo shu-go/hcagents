@@ -1,0 +1,171 @@
+# Build hcagents for each platform and publish a GitHub Release.
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# A tag with a suffix (v0.2.0-rc1) makes a prerelease.
+# macOS and Linux need cgo (WebKit), so each OS builds on its own runner.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        if: matrix.arch == 'amd64'
+        run: go test ./...
+
+      - name: Install wails3
+        run: go install "github.com/wailsapp/wails/v3/cmd/wails3@$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+
+      - name: Set version in info.json
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NUM="${VERSION%%-*}"
+          jq --arg v "$VERSION" --arg n "$NUM" '
+            .fixed.file_version = $n | .fixed.product_version = $n |
+            .info["0409"].FileVersion = $v | .info["0409"].ProductVersion = $v
+          ' build/windows/info.json > info.json.tmp
+          mv info.json.tmp build/windows/info.json
+
+      - name: Build
+        env:
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: "0"
+        run: |
+          wails3 generate syso -arch "$GOARCH" -icon build/windows/icon.ico \
+            -manifest build/windows/wails.exe.manifest -info build/windows/info.json \
+            -out "hcagents_windows_${GOARCH}.syso"
+          go build -trimpath -ldflags="-s -w -H windowsgui" -o pkg/hcagents.exe .
+
+      - name: Package
+        run: |
+          cp README.md README_ja.md LICENSE hcagents.example.yaml pkg/
+          mkdir -p dist
+          (cd pkg && 7z a "../dist/hcagents_${GITHUB_REF_NAME}_windows_${{ matrix.arch }}.zip" .)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: dist/*
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build (universal .app)
+        env:
+          CGO_ENABLED: "1"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          APP=pkg/hcagents.app
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o hcagents-arm64 .
+          GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o hcagents-amd64 .
+          lipo -create -output "$APP/Contents/MacOS/hcagents" hcagents-arm64 hcagents-amd64
+          cp build/darwin/Info.plist "$APP/Contents/Info.plist"
+          cp build/darwin/icons.icns "$APP/Contents/Resources/icons.icns"
+          plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"
+          plutil -replace CFBundleVersion -string "${VERSION%%-*}" "$APP/Contents/Info.plist"
+          # Ad-hoc signature (not notarized).
+          codesign --force --deep --sign - "$APP"
+
+      - name: Package
+        run: |
+          cp README.md README_ja.md LICENSE hcagents.example.yaml pkg/
+          mkdir -p dist
+          # ditto keeps the code signature intact.
+          ditto -c -k pkg "dist/hcagents_${GITHUB_REF_NAME}_macos_universal.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal
+          path: dist/*
+
+  linux:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install GTK / WebKitGTK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+        run: go build -trimpath -ldflags="-s -w" -o pkg/hcagents .
+
+      - name: Package
+        run: |
+          cp README.md README_ja.md LICENSE hcagents.example.yaml pkg/
+          mkdir -p dist
+          tar -C pkg -czf "dist/hcagents_${GITHUB_REF_NAME}_linux_${{ matrix.arch }}.tar.gz" .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/*
+
+  release:
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes "${flags[@]}"
