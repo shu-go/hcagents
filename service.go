@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"github.com/shu-go/hcagents/internal/config"
 	"github.com/shu-go/hcagents/internal/herdr"
@@ -96,6 +97,10 @@ func (s *AgentService) ServiceStartup(ctx context.Context, _ application.Service
 	if s.cfg.StartHerdr {
 		go s.startHerdr(ctx) // the list shows the core's agents meanwhile
 	}
+	// The OS switched between light and dark: matters for the "system" setting.
+	application.Get().Event.OnApplicationEvent(events.Common.ThemeChanged, func(*application.ApplicationEvent) {
+		s.emitTheme()
+	})
 	go s.loop(ctx)
 	return nil
 }
@@ -564,15 +569,29 @@ func (s *AgentService) Refresh() {
 	}
 }
 
-// Theme returns the color theme: "system", "light" or "dark".
+// Theme returns the colors to draw in: "light" or "dark". For the "system"
+// setting it is the OS's, read here rather than through the page's
+// prefers-color-scheme, which the webview doesn't keep in step with the OS.
 func (s *AgentService) Theme() string {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.cfg.Theme
+	t := s.cfg.Theme
+	s.mu.Unlock()
+	if t != config.ThemeSystem {
+		return t
+	}
+	if application.Get().Env.IsDarkMode() {
+		return config.ThemeDark
+	}
+	return config.ThemeLight
 }
 
-// SetTheme switches the color theme now (the "theme" event) and saves it in the
-// config file (which is created next to the executable if there is none yet).
+// emitTheme tells the page the colors to draw in (the "theme" event).
+func (s *AgentService) emitTheme() {
+	application.Get().Event.Emit("theme", s.Theme())
+}
+
+// SetTheme switches the theme setting ("system", "light" or "dark") now and saves
+// it in the config file (which is created next to the executable if there is none yet).
 func (s *AgentService) SetTheme(theme string) {
 	theme = config.NormalizeTheme(theme)
 	s.mu.Lock()
@@ -582,7 +601,7 @@ func (s *AgentService) SetTheme(theme string) {
 	if err != nil {
 		log.Println("save theme:", err)
 	}
-	application.Get().Event.Emit("theme", theme)
+	s.emitTheme()
 }
 
 // UserCSS returns the user's stylesheet ("" if none).

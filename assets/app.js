@@ -254,28 +254,19 @@ function setCSS(css) {
   $userCSS.textContent = css || "";
 }
 
-// ---- theme: "system" | "light" | "dark" (the tray menu; saved by the app) ----
-// <html data-theme> is always the resolved "light" or "dark", so CSS needs no
-// media query. The last one is kept in localStorage to start in it (no flash).
+// ---- theme: <html data-theme> is "light" or "dark" ----
+// The app resolves the tray menu's System / Light / Dark (System: the OS's
+// setting, read natively: the webview's prefers-color-scheme doesn't follow the
+// OS) and sends the result. The last one is kept in localStorage, so the next
+// start begins in it (see index.html).
 const THEME_KEY = "hcagents.theme";
-const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-let themeSetting = "system";
-function applyTheme() {
-  const resolved = themeSetting === "system" ? (darkQuery.matches ? "dark" : "light") : themeSetting;
-  document.documentElement.dataset.theme = resolved;
-}
 function setTheme(t) {
-  themeSetting = t === "light" || t === "dark" ? t : "system";
-  applyTheme();
+  if (t !== "light" && t !== "dark") return;
+  document.documentElement.dataset.theme = t;
   try {
-    localStorage.setItem(THEME_KEY, themeSetting);
+    localStorage.setItem(THEME_KEY, t);
   } catch {}
 }
-try {
-  themeSetting = localStorage.getItem(THEME_KEY) || "system";
-} catch {}
-applyTheme();
-darkQuery.addEventListener("change", applyTheme);
 
 document.querySelector(".refresh-button").addEventListener("click", () => call("Refresh"));
 document.querySelector(".hide-button").addEventListener("click", () => wails.Window.Hide());
