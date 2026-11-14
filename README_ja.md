@@ -20,7 +20,7 @@ Go と [Wails v3](https://v3alpha.wails.io) で作っています。
 ## 必要なもの
 
 - Herdr: `herdr-app` と `hc`(herdr-core)。`PATH` に置くか、設定ファイルで指定します。
-- Windows 10/11(WebView2)、macOS 11 以降、または Linux(GTK 3、WebKitGTK 4.1)
+- Windows 10/11(WebView2)、macOS 11 以降、または Linux(GTK 4、WebKitGTK 6.0)
 
 開発・利用は Windows で行っています。macOS と Linux 向けのビルドは用意していますが、まだ動作確認していません。
 

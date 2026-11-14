@@ -25,7 +25,7 @@ Built with Go and [Wails v3](https://v3alpha.wails.io).
 ## Requirements
 
 - Herdr: `herdr-app` and `hc` (herdr-core), on `PATH` or set in the config
-- Windows 10/11 (WebView2), macOS 11+, or Linux (GTK 3, WebKitGTK 4.1)
+- Windows 10/11 (WebView2), macOS 11+, or Linux (GTK 4, WebKitGTK 6.0)
 
 Developed and used on Windows. The macOS and Linux builds are written but not tested yet.
 

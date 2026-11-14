@@ -91,7 +91,7 @@ tasks:
       - codesign --force --deep --sign - "{{.BIN}}/{{.APP}}.app"
 
   build:linux:
-    desc: Build bin/hcagents (needs gtk3 and webkit2gtk-4.1 dev packages)
+    desc: Build bin/hcagents (needs gtk4 and webkitgtk-6.0 dev packages)
     platforms: [linux]
     sources: *sources
     generates:
