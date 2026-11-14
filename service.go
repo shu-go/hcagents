@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -471,8 +472,15 @@ func (s *AgentService) Agents() Snapshot {
 }
 
 // Focus shows the agent in Herdr: its space and tab, or a peek for a sub-agent.
+// Then (Windows only, for now) it brings Herdr's window to the front.
 func (s *AgentService) Focus(terminal string) error {
-	return s.client.Do(context.Background(), "agent.focus", map[string]any{"terminal": terminal})
+	if err := s.client.Do(context.Background(), "agent.focus", map[string]any{"terminal": terminal}); err != nil {
+		return err
+	}
+	if err := s.client.RaiseWindow(); err != nil {
+		log.Println("raise Herdr:", err)
+	}
+	return nil
 }
 
 // Refresh polls now.
