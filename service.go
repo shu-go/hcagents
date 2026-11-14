@@ -70,6 +70,10 @@ type AgentService struct {
 	refresh chan struct{}
 
 	startMu sync.Mutex // one Herdr start (and wait) at a time
+
+	// onSnapshot, when set, gets each new snapshot (for the tray). Unexported:
+	// Wails binds only exported methods and fields stay out of the bindings.
+	onSnapshot func(Snapshot)
 }
 
 type termMeta struct {
@@ -156,6 +160,9 @@ func (s *AgentService) poll(ctx context.Context) {
 	cssChanged := s.checkCSS()
 	s.mu.Unlock()
 
+	if s.onSnapshot != nil {
+		s.onSnapshot(snap)
+	}
 	app := application.Get()
 	app.Event.Emit("agents", snap)
 	if cssChanged {

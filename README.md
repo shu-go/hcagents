@@ -62,6 +62,7 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **Pin** (on hover, in place of the elapsed time): pin or unpin
 - **Title bar**: drag to move; ⟳ refreshes now; × hides the window
 - **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Theme (System / Light / Dark), Refresh and Quit
+- **Tray badge**: a dot on the tray icon for the most urgent group: red (Needs you), blue (Done) or yellow (Working); none when all are idle. The tooltip has the counts (not on macOS, which has no tray tooltips)
 
 When Herdr's window isn't running, hcagents still lists the agents from herdr-core
 (the title bar shows "core", with a note above the list). Clicking a row then

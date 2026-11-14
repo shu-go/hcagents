@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -81,15 +80,16 @@ func main() {
 	}
 
 	tray := app.SystemTray.New()
-	if runtime.GOOS == "darwin" {
-		// A template icon: macOS draws its alpha in the menu bar's color.
-		tray.SetTemplateIcon(trayIcon(appIcon, black))
-	} else {
-		tray.SetIcon(trayIcon(appIcon, black))
-		tray.SetDarkModeIcon(trayIcon(appIcon, white))
-	}
+	// The icon gets a badge for the most urgent group (Needs you / Done / Working),
+	// the tooltip the counts; both follow each refresh.
+	trayU := newTrayUpdater(tray, appIcon)
+	setTrayIcon(tray, trayU.icons[""])
 	tray.SetTooltip("hcagents")
 	tray.OnClick(toggle)
+	svc.onSnapshot = func(snap Snapshot) { trayU.update(trayStateOf(snap)) }
+	// macOS draws the glyph in black or white by dark mode (see tray_darwin.go).
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { trayU.reapply() })
+	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(*application.ApplicationEvent) { trayU.reapply() })
 
 	onTop := cfg.Window.AlwaysOnTop
 	menu := app.NewMenu()
