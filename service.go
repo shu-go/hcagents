@@ -22,8 +22,12 @@ type AgentView struct {
 	Terminal string `json:"terminal"`
 	Status   string `json:"status"` // blocked, done, working, idle; "" for a sub terminal that isn't an agent
 	// Group is the section the agent is listed in: the most urgent status of it and its sub-agents.
-	Group   string `json:"group,omitempty"`
-	App     string `json:"app"`
+	Group string `json:"group,omitempty"`
+	App   string `json:"app"`
+	// Icon is the key in Herdr's program table ("claude", "shell", "agent", ...);
+	// the frontend gets the picture with Icon(key). Tint: a one-color glyph.
+	Icon    string `json:"icon"`
+	Tint    bool   `json:"tint"`
 	Name    string `json:"name"` // the terminal's name (hc run --name), if any
 	Space   string `json:"space"`
 	Machine string `json:"machine"`
@@ -53,8 +57,9 @@ const maxDepth = 8
 
 // AgentService polls Herdr and is called from the frontend.
 type AgentService struct {
-	cfg    *config.Config
-	client *herdr.Client
+	cfg      *config.Config
+	client   *herdr.Client
+	programs *herdr.Programs
 
 	mu      sync.Mutex
 	last    Snapshot
@@ -71,11 +76,16 @@ type termMeta struct {
 }
 
 func NewAgentService(cfg *config.Config) *AgentService {
+	programs, err := herdr.LoadPrograms(herdr.Home(cfg.HerdrHome))
+	if err != nil {
+		log.Printf("herdr programs.json: %v", err)
+	}
 	return &AgentService{
-		cfg:     cfg,
-		client:  &herdr.Client{AppPath: cfg.HerdrApp, CorePath: cfg.Hc},
-		meta:    map[string]termMeta{},
-		refresh: make(chan struct{}, 1),
+		cfg:      cfg,
+		client:   &herdr.Client{AppPath: cfg.HerdrApp, CorePath: cfg.Hc},
+		programs: programs,
+		meta:     map[string]termMeta{},
+		refresh:  make(chan struct{}, 1),
 	}
 }
 
@@ -202,6 +212,7 @@ func (s *AgentService) collect(ctx context.Context) Snapshot {
 	}
 	s.fillMeta(ctx, snap.Agents)
 	setDetails(snap.Agents)
+	s.setIcons(snap.Agents, true)
 
 	// Like Herdr's agents list (priority sort): an agent's section is the most urgent
 	// of it and its sub-agents; within a section, the most recent change comes first.
@@ -216,6 +227,16 @@ func (s *AgentService) collect(ctx context.Context) Snapshot {
 		return a.SinceMS > b.SinceMS
 	})
 	return snap
+}
+
+// setIcons picks each row's icon as Herdr does: by the agent's app name, else the
+// program it runs. top: the top-level rows, which are agents even without an app name.
+func (s *AgentService) setIcons(list []AgentView, top bool) {
+	for i := range list {
+		p := s.programs.Lookup(list[i].App, top || list[i].Status != "")
+		list[i].Icon, list[i].Tint = p.Key, p.Tint
+		s.setIcons(list[i].Children, false)
+	}
 }
 
 // urgency is the most urgent status of a and its sub-agents (blocked > done > working > idle).
@@ -481,6 +502,12 @@ func (s *AgentService) Focus(terminal string) error {
 		log.Println("raise Herdr:", err)
 	}
 	return nil
+}
+
+// Icon returns the picture for an AgentView's Icon key as a data: URL, taken from
+// Herdr's home (icons/), or "" when Herdr has none there.
+func (s *AgentService) Icon(key string) (string, error) {
+	return s.programs.Icon(key)
 }
 
 // Refresh polls now.

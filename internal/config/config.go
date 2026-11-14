@@ -19,6 +19,9 @@ type Config struct {
 	HerdrApp string `yaml:"herdr_app"`
 	// Hc is the herdr-core (hc) executable. Empty: look up in PATH.
 	Hc string `yaml:"hc"`
+	// HerdrHome is Herdr's app folder, for its icons and programs.json.
+	// Empty: $HERDR_APP_HOME, else $XDG_CONFIG_HOME/herdr-app, else ~/.config/herdr-app.
+	HerdrHome string `yaml:"herdr_home"`
 	// Interval between refreshes, e.g. "3s".
 	Interval Duration `yaml:"interval"`
 	// CSS is a user stylesheet loaded after the built-in one.

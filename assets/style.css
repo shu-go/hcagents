@@ -11,7 +11,11 @@
           .group-title (.group-name .group-count)
           .agent-item.is-<status> [.is-collapsed]
             .agent.is-<status> [.is-disabled] [.is-pinned]
-              .agent-icon   (data-app="claude-code" ..., .is-shell)
+              .agent-icon   (data-app="claude-code" ..., data-icon="claude" ..., .is-shell)
+                            Herdr's icon, once loaded: .has-image plus
+                            .is-tint     > .icon-glyph  (one-color: drawn in `color`)
+                            .is-picture  > img.icon-image
+                            Without Herdr's icons: a letter, or ">_" for a shell.
               .agent-name   (space name)
               .agent-place  (· machine · named tab or the agent's title)
               .agent-toggle (only with sub-agents)
@@ -21,7 +25,7 @@
             .subagents                       (sub-agents, drawn as a tree)
               .subagent-item.is-<status>     (status "none": not an agent, e.g. a shell)
                 .subagent.is-<status> [.is-disabled]
-                  .subagent-icon .subagent-name .subagent-status
+                  .subagent-icon (as .agent-icon) .subagent-name .subagent-status
                 .subagents                   (their own sub-agents, nested)
 */
 
@@ -37,6 +41,7 @@
   --color-working: #d4a72c;
   --color-idle: #8a8a8e;
   --color-tree: #444448;
+  --color-icon: var(--color-fg); /* one-color icons (Herdr draws them in the text color) */
 
   --font-family: "Geist", "Segoe UI", system-ui, sans-serif;
   --font-size: 13px;
@@ -253,6 +258,30 @@ html, body {
 /* shells get a ">_" svg (drawn in the text color) */
 .agent-icon.is-shell,
 .subagent-icon.is-shell { padding: 1px; }
+
+/* Herdr's own icons: no tile, as in Herdr's agents list */
+.agent-icon.has-image,
+.subagent-icon.has-image {
+  background: none;
+  padding: 0;
+  color: var(--color-icon);
+}
+.icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.icon-glyph {
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
 
 .subagent-name {
   flex: 1;

@@ -10,6 +10,11 @@
 herdr_app: ""
 hc: ""
 
+# Herdr's app folder: the agent icons come from its icons/ (and programs.json).
+# Empty: $HERDR_APP_HOME, else $XDG_CONFIG_HOME/herdr-app, else ~/.config/herdr-app.
+# GUI apps on macOS may not get HERDR_APP_HOME from your shell either.
+herdr_home: ""
+
 # How often to refresh.
 interval: 3s
 

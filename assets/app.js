@@ -60,13 +60,56 @@ function elapsed(sinceMs, now) {
   return `${Math.floor(h / 24)}d`;
 }
 
-function icon(className, app) {
-  const isShell = SHELLS.has((app || "").toLowerCase());
+// ---- icons: Herdr's own (from its home folder), fetched once per key ----
+const iconURLs = new Map(); // key -> data: URL, "" when Herdr has none
+const iconWaits = new Map(); // key -> Promise<string>
+function iconURL(key) {
+  if (!iconWaits.has(key)) {
+    iconWaits.set(
+      key,
+      call("Icon", key)
+        .catch(() => "")
+        .then((url) => {
+          iconURLs.set(key, url || "");
+          return url || "";
+        }),
+    );
+  }
+  return iconWaits.get(key);
+}
+
+// setIconImage puts Herdr's picture in $icon: a one-color glyph (tint) is drawn in
+// the text color through a mask, anything else as an image.
+function setIconImage($icon, url, tint) {
+  if (!url) return;
+  let $pic;
+  if (tint) {
+    $pic = el("span", "icon-glyph");
+    $pic.style.maskImage = $pic.style.webkitMaskImage = `url("${url}")`;
+  } else {
+    $pic = el("img", "icon-image");
+    $pic.src = url;
+    $pic.alt = "";
+  }
+  $icon.replaceChildren($pic);
+  $icon.classList.add("has-image", tint ? "is-tint" : "is-picture");
+}
+
+// icon draws a row's icon: Herdr's picture when there is one, else a letter
+// (or ">_" for a shell) until it loads or when Herdr's icons aren't found.
+function icon(className, item) {
+  const app = item.app || "";
+  const isShell = item.icon === "shell" || SHELLS.has(app.toLowerCase());
   const $icon = el("span", className, isShell ? null : (app || "?").charAt(0).toUpperCase());
-  $icon.dataset.app = app || "";
+  $icon.dataset.app = app;
+  if (item.icon) $icon.dataset.icon = item.icon;
   if (isShell) {
     $icon.classList.add("is-shell");
     $icon.innerHTML = SHELL_SVG;
+  }
+  if (item.icon) {
+    if (iconURLs.has(item.icon)) setIconImage($icon, iconURLs.get(item.icon), item.tint);
+    else iconURL(item.icon).then((url) => setIconImage($icon, url, item.tint));
   }
   return $icon;
 }
@@ -97,7 +140,7 @@ function renderChildren(children, canFocus) {
     $row.dataset.terminal = c.terminal;
     $row.title = [c.title, c.terminal].filter(Boolean).join("\n");
     $row.append(
-      icon("subagent-icon", c.app),
+      icon("subagent-icon", c),
       el("span", "subagent-name", c.name || c.app || c.terminal),
       el("span", "subagent-status"),
     );
@@ -120,7 +163,7 @@ function renderAgent(a, now, canFocus) {
   if (a.pinned) $row.classList.add("is-pinned");
   // detail: a named tab, else the agent's title (as Herdr shows it)
   const place = [a.machine, a.detail].filter(Boolean).map((s) => `· ${s}`).join(" ");
-  $row.append(icon("agent-icon", a.app), el("span", "agent-name", a.space), el("span", "agent-place", place));
+  $row.append(icon("agent-icon", a), el("span", "agent-name", a.space), el("span", "agent-place", place));
 
   const hasChildren = a.children && a.children.length > 0;
   if (hasChildren) {
