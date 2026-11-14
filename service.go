@@ -90,8 +90,25 @@ func NewAgentService(cfg *config.Config) *AgentService {
 }
 
 func (s *AgentService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
-	go s.loop(ctx)
+	go func() {
+		if s.cfg.StartHerdr {
+			s.startHerdr(ctx)
+		}
+		s.loop(ctx)
+	}()
 	return nil
+}
+
+// startHerdr starts Herdr's window if it isn't running yet.
+func (s *AgentService) startHerdr(ctx context.Context) {
+	started, err := s.client.Start(ctx)
+	if err != nil {
+		log.Printf("start herdr-app: %v", err)
+		return
+	}
+	if started {
+		log.Println("started herdr-app")
+	}
 }
 
 func (s *AgentService) loop(ctx context.Context) {

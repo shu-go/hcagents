@@ -16,3 +16,9 @@ func hideWindow(cmd *exec.Cmd) {
 		CreationFlags: createNoWindow,
 	}
 }
+
+// guiLaunch is for starting `herdr-app` itself: no console for the shim,
+// but no SW_HIDE either, or a fresh Herdr would start hidden.
+func guiLaunch(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow}
+}

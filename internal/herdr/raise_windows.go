@@ -2,10 +2,7 @@
 
 package herdr
 
-import (
-	"os/exec"
-	"syscall"
-)
+import "syscall"
 
 var procAllowSetForegroundWindow = syscall.NewLazyDLL("user32.dll").NewProc("AllowSetForegroundWindow")
 
@@ -19,13 +16,5 @@ const asfwAny = 0xFFFFFFFF // ASFW_ANY: any process may take the foreground
 // right after a click in our own window, while we still are the foreground process.
 func (c *Client) RaiseWindow() error {
 	procAllowSetForegroundWindow.Call(asfwAny)
-
-	cmd := exec.Command(c.app())
-	// No console for the shim, but no SW_HIDE either: a fresh Herdr would start hidden.
-	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow}
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	go cmd.Wait() // reap it
-	return nil
+	return c.launch()
 }

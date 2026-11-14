@@ -83,6 +83,7 @@ The first one found is used.
 herdr_app: ""     # herdr-app executable; empty: from PATH
 hc: ""            # hc executable; empty: from PATH
 herdr_home: ""    # Herdr's app folder (icons); empty: $HERDR_APP_HOME, else ~/.config/herdr-app
+start_herdr: true # start Herdr on startup when it isn't running
 interval: 3s      # how often to refresh
 css: user.css     # your stylesheet, relative to this file; reloaded when it changes
 window:

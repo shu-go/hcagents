@@ -73,6 +73,7 @@ Herdr のウィンドウが起動していないときも、herdr-core からエ
 herdr_app: ""     # herdr-app の実行ファイル。空なら PATH から探す
 hc: ""            # hc の実行ファイル。空なら PATH から探す
 herdr_home: ""    # Herdr のアプリフォルダ(アイコン用)。空なら $HERDR_APP_HOME、なければ ~/.config/herdr-app
+start_herdr: true # 起動時、Herdr が起動していなければ起動する
 interval: 3s      # 更新間隔
 css: user.css     # 自分のスタイルシート。このファイルからの相対パス。変更すると自動で再読み込み
 window:

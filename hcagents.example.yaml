@@ -15,6 +15,9 @@ hc: ""
 # GUI apps on macOS may not get HERDR_APP_HOME from your shell either.
 herdr_home: ""
 
+# Start Herdr (herdr-app) on startup when it isn't running.
+start_herdr: true
+
 # How often to refresh.
 interval: 3s
 

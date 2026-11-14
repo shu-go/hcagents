@@ -22,6 +22,8 @@ type Config struct {
 	// HerdrHome is Herdr's app folder, for its icons and programs.json.
 	// Empty: $HERDR_APP_HOME, else $XDG_CONFIG_HOME/herdr-app, else ~/.config/herdr-app.
 	HerdrHome string `yaml:"herdr_home"`
+	// StartHerdr starts Herdr's window on startup when it isn't running.
+	StartHerdr bool `yaml:"start_herdr"`
 	// Interval between refreshes, e.g. "3s".
 	Interval Duration `yaml:"interval"`
 	// CSS is a user stylesheet loaded after the built-in one.
@@ -42,7 +44,8 @@ type Window struct {
 
 func Default() *Config {
 	return &Config{
-		Interval: Duration(3 * time.Second),
+		StartHerdr: true,
+		Interval:   Duration(3 * time.Second),
 		Window: Window{
 			Width:       280,
 			Height:      360,
