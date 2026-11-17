@@ -101,25 +101,15 @@ func main() {
 		onTop = ctx.ClickedMenuItem().Checked()
 		win.SetAlwaysOnTop(onTop)
 	})
-	themeMenu := menu.AddSubmenu("Theme")
-	for _, t := range []struct{ label, value string }{
+	addRadios(menu.AddSubmenu("Theme"), cfg.Theme, svc.SetTheme, []radioChoice{
 		{"System", config.ThemeSystem},
 		{"Light", config.ThemeLight},
 		{"Dark", config.ThemeDark},
-	} {
-		themeMenu.AddRadio(t.label, cfg.Theme == t.value).OnClick(func(*application.Context) {
-			svc.SetTheme(t.value)
-		})
-	}
-	growMenu := menu.AddSubmenu("Grow")
-	for _, g := range []struct{ label, value string }{
+	})
+	addRadios(menu.AddSubmenu("Grow"), cfg.Grow, svc.setGrow, []radioChoice{
 		{"Upward", config.GrowUp},
 		{"Downward", config.GrowDown},
-	} {
-		growMenu.AddRadio(g.label, cfg.Grow == g.value).OnClick(func(*application.Context) {
-			svc.setGrow(g.value)
-		})
-	}
+	})
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) {
@@ -130,5 +120,26 @@ func main() {
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+type radioChoice struct{ label, value string }
+
+// addRadios adds a radio group to m; picking one calls set with its value.
+// The other items are unchecked here: Wails groups radios only in Menu.Update,
+// which a tray menu set before app.Run never gets (Windows). Their stale checked
+// flag then made a click on them a no-op (it returns early for a checked radio).
+func addRadios(m *application.Menu, current string, set func(string), choices []radioChoice) {
+	items := make([]*application.MenuItem, len(choices))
+	for i, c := range choices {
+		items[i] = m.AddRadio(c.label, current == c.value)
+	}
+	for i, c := range choices {
+		items[i].OnClick(func(*application.Context) {
+			for j, it := range items {
+				it.SetChecked(j == i)
+			}
+			set(c.value)
+		})
 	}
 }
