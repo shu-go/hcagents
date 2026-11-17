@@ -20,10 +20,11 @@ herdr_home: ""
 # Start Herdr (herdr-app) on startup when it isn't running.
 start_herdr: true
 
-# How often to refresh while the window is shown, and while it is hidden
-# (the tray badge still follows). Showing the window refreshes at once.
-interval: 5s
-hidden_interval: 10s
+# Agents' statuses and titles come from herdr-core as they change. These are how
+# often Herdr's own list (spaces, tabs, whether its window runs) is read again,
+# while the window is shown and while it is hidden. Showing the window reads it at once.
+interval: 10s
+hidden_interval: 30s
 
 # Your stylesheet, loaded after the built-in one (assets/style.css).
 # Relative to this file's folder. Reloaded when it changes.

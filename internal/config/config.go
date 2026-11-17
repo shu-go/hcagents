@@ -25,10 +25,10 @@ type Config struct {
 	HerdrHome string `yaml:"herdr_home"`
 	// StartHerdr starts Herdr's window on startup when it isn't running.
 	StartHerdr bool `yaml:"start_herdr"`
-	// Interval between refreshes while the window is shown, e.g. "5s".
+	// Interval between reads of Herdr's own list (herdr-app ls) while the window
+	// is shown, e.g. "10s". Statuses come from `hc events` as they change.
 	Interval Duration `yaml:"interval"`
-	// HiddenInterval is the one while the window is hidden: slower, but the
-	// tray badge still needs to follow.
+	// HiddenInterval is the one while the window is hidden.
 	HiddenInterval Duration `yaml:"hidden_interval"`
 	// CSS is a user stylesheet loaded after the built-in one.
 	// A relative path is relative to the config file's folder.
@@ -54,8 +54,8 @@ type Window struct {
 func Default() *Config {
 	return &Config{
 		StartHerdr:     true,
-		Interval:       Duration(5 * time.Second),
-		HiddenInterval: Duration(10 * time.Second),
+		Interval:       Duration(10 * time.Second),
+		HiddenInterval: Duration(30 * time.Second),
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
 		Window: Window{

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -47,7 +48,7 @@ type AgentView struct {
 // Snapshot is what the "agents" event carries.
 type Snapshot struct {
 	Agents []AgentView `json:"agents"`
-	// Source: "app" (herdr-app ls) or "core" (hc ls: Herdr's window isn't running).
+	// Source: "app" (herdr-app ls) or "core" (hc events only: Herdr's window isn't running).
 	Source string `json:"source"`
 	Error  string `json:"error"`
 	At     int64  `json:"at"`
@@ -65,9 +66,20 @@ type AgentService struct {
 
 	mu      sync.Mutex
 	last    Snapshot
-	meta    map[string]termMeta // terminal -> details from `hc get`
 	cssMod  time.Time
-	refresh chan struct{}
+	refresh chan struct{} // poll now, herdr-app ls included
+	changed chan struct{} // the core's terminals changed
+
+	// The core's live terminals, kept by watch from `hc events`.
+	coreMu sync.Mutex
+	coreOK bool // the stream is up (its snapshot arrived)
+	core   herdr.Terminals
+	needLs bool // terminals came or went: ask herdr-app ls again
+
+	// Used by the loop goroutine only.
+	app    *herdr.Snapshot // the last herdr-app ls, nil when Herdr's window isn't running
+	appErr error
+	since  map[string]since // terminal -> when its status started
 
 	startMu sync.Mutex // one Herdr start (and wait) at a time
 
@@ -80,11 +92,9 @@ type AgentService struct {
 	visible func() bool
 }
 
-type termMeta struct {
-	status  string
-	sinceMS int64
-	name    string
-	title   string
+type since struct {
+	key string // changeKey of the status
+	ms  int64
 }
 
 func NewAgentService(cfg *config.Config) *AgentService {
@@ -96,8 +106,10 @@ func NewAgentService(cfg *config.Config) *AgentService {
 		cfg:      cfg,
 		client:   &herdr.Client{AppPath: cfg.HerdrApp, CorePath: cfg.Hc},
 		programs: programs,
-		meta:     map[string]termMeta{},
 		refresh:  make(chan struct{}, 1),
+		changed:  make(chan struct{}, 1),
+		core:     herdr.Terminals{},
+		since:    map[string]since{},
 	}
 }
 
@@ -109,6 +121,7 @@ func (s *AgentService) ServiceStartup(ctx context.Context, _ application.Service
 	application.Get().Event.OnApplicationEvent(events.Common.ThemeChanged, func(*application.ApplicationEvent) {
 		s.emitTheme()
 	})
+	go s.watch(ctx)
 	go s.loop(ctx)
 	return nil
 }
@@ -143,23 +156,108 @@ func (s *AgentService) ensureHerdr(ctx context.Context) error {
 	return nil
 }
 
+// watch keeps s.core up to date from the core's event stream (`hc events`), and
+// starts the stream again when it ends.
+func (s *AgentService) watch(ctx context.Context) {
+	backoff := time.Second
+	for {
+		began := time.Now()
+		err := s.client.Events(ctx, s.onEvent)
+		s.coreMu.Lock()
+		wasOK := s.coreOK
+		s.coreOK = false
+		clear(s.core)
+		s.coreMu.Unlock()
+		if wasOK {
+			s.coreChanged()
+		}
+		if ctx.Err() != nil {
+			return
+		}
+		log.Println(err)
+		if time.Since(began) > time.Minute {
+			backoff = time.Second
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(backoff):
+		}
+		backoff = min(backoff*2, 30*time.Second)
+	}
+}
+
+func (s *AgentService) onEvent(ev herdr.Event) {
+	s.coreMu.Lock()
+	changed, moved, err := s.core.Apply(ev, time.Now().UnixMilli())
+	if ev.Type == "snapshot" {
+		s.coreOK = true
+	}
+	// A status change: Herdr's own view (done turns idle once seen) is read again too.
+	if moved || (changed && ev.Type == "status") {
+		s.needLs = true
+	}
+	s.coreMu.Unlock()
+	if err != nil {
+		log.Println("hc events:", err)
+	}
+	if changed {
+		s.coreChanged()
+	}
+}
+
+// coreChanged asks the loop to rebuild the list.
+func (s *AgentService) coreChanged() {
+	select {
+	case s.changed <- struct{}{}:
+	default:
+	}
+}
+
+// settle is how long a burst of core events (titles change often) is gathered into one update.
+const settle = 300 * time.Millisecond
+
+// loop builds and emits the list: at once when the core reports a change, and
+// every interval with herdr-app ls too (Herdr's window, spaces and tabs).
 func (s *AgentService) loop(ctx context.Context) {
 	t := time.NewTimer(s.interval()) // Reset below drops a stale tick (Go 1.23+ timers)
 	defer t.Stop()
+	// Give the core's stream a moment for its snapshot, so the first list is whole
+	// (and doesn't flash an error while Herdr's window is closed).
+	select {
+	case <-ctx.Done():
+		return
+	case <-s.changed:
+	case <-time.After(2 * time.Second):
+	}
+	full := true
 	for {
-		s.poll(ctx)
-		t.Reset(s.interval())
+		s.poll(ctx, full)
+		if full {
+			t.Reset(s.interval())
+		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			full = true
 		case <-s.refresh:
+			full = true
+		case <-s.changed:
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(settle):
+			}
+			s.coreMu.Lock()
+			full = s.needLs
+			s.coreMu.Unlock()
 		}
 	}
 }
 
-// interval is the time until the next refresh: longer while the window is hidden
-// (hc and herdr-app are called less often; the tray badge still follows).
+// interval is the time until the next herdr-app ls: longer while the window is
+// hidden. The core's changes come as they happen either way (the tray badge follows).
 func (s *AgentService) interval() time.Duration {
 	if s.visible != nil && !s.visible() {
 		return s.cfg.HiddenInterval.Std()
@@ -167,50 +265,61 @@ func (s *AgentService) interval() time.Duration {
 	return s.cfg.Interval.Std()
 }
 
-func (s *AgentService) poll(ctx context.Context) {
-	snap := s.collect(ctx)
+// poll builds the list and emits it. full: ask herdr-app ls again first; such a
+// poll is always emitted (the page redraws the elapsed times), a core-only one
+// only when the list changed.
+func (s *AgentService) poll(ctx context.Context, full bool) {
+	if full {
+		s.coreMu.Lock()
+		s.needLs = false
+		s.coreMu.Unlock()
+		s.app, s.appErr = s.client.Ls(ctx)
+	}
+	snap := s.collect()
 	s.mu.Lock()
+	same := !full && sameSnapshot(s.last, snap)
 	s.last = snap
 	cssChanged := s.checkCSS()
 	s.mu.Unlock()
 
-	if s.onSnapshot != nil {
-		s.onSnapshot(snap)
-	}
 	app := application.Get()
-	app.Event.Emit("agents", snap)
+	if !same {
+		if s.onSnapshot != nil {
+			s.onSnapshot(snap)
+		}
+		app.Event.Emit("agents", snap)
+	}
 	if cssChanged {
 		app.Event.Emit("css", s.UserCSS())
 	}
 }
 
-func (s *AgentService) collect(ctx context.Context) Snapshot {
+// sameSnapshot: a and b draw the same (At aside).
+func sameSnapshot(a, b Snapshot) bool {
+	a.At, b.At = 0, 0
+	return reflect.DeepEqual(a, b)
+}
+
+func (s *AgentService) collect() Snapshot {
 	snap := Snapshot{At: time.Now().UnixMilli()}
 
-	// The core's list gives sub-agents' parents and statuses. It only knows this machine.
-	core := map[string]herdr.CoreListTerminal{}
-	children := map[string][]string{} // parent -> children, in hc's order
-	cl, coreErr := s.client.CoreLs(ctx)
-	if coreErr == nil {
-		for _, t := range cl.Terminals {
-			core[t.Address] = t
-			if t.Parent != "" {
-				children[t.Parent] = append(children[t.Parent], t.Address)
-			}
+	// The core's terminals give sub-agents' parents and statuses, titles, names and pins.
+	s.coreMu.Lock()
+	coreOK := s.coreOK
+	list := s.core.Sorted()
+	s.coreMu.Unlock()
+	core := map[string]herdr.Terminal{}
+	children := map[string][]string{} // parent -> children, oldest first
+	for _, t := range list {
+		core[t.Address] = t
+		if p := t.ParentAddr(); p != "" {
+			children[p] = append(children[p], t.Address)
 		}
 	}
 
-	// Pinned agents (terminal.pin): the label is on the terminal, so every Herdr client agrees.
-	pinned := map[string]bool{}
-	if pl, err := s.client.CoreLs(ctx, pinnedLabel+"=1"); err == nil {
-		for _, t := range pl.Terminals {
-			pinned[t.Address] = true
-		}
-	}
-
-	if ls, err := s.client.Ls(ctx); err == nil {
+	if s.app != nil && s.appErr == nil {
 		snap.Source = "app"
-		for _, a := range ls.Agents() {
+		for _, a := range s.app.Agents() {
 			// Herdr's sub_agents also covers other machines' children.
 			for _, c := range a.SubAgents {
 				if !contains(children[a.Terminal], c) {
@@ -218,29 +327,34 @@ func (s *AgentService) collect(ctx context.Context) Snapshot {
 				}
 			}
 			snap.Agents = append(snap.Agents, AgentView{
-				Terminal: a.Terminal, Status: a.Status, App: a.App,
+				Terminal: a.Terminal, Status: liveStatus(a.Status, core[a.Terminal].StatusState()), App: a.App,
 				Space: a.SpaceName, Machine: a.Machine, Tab: a.TabName,
 			})
 		}
-	} else if coreErr == nil {
+	} else if coreOK {
 		// Herdr's window isn't running: show what the core knows, without ids.
 		snap.Source = "core"
-		for _, t := range cl.Terminals {
-			if t.Status == "" {
+		for _, t := range list {
+			if t.StatusState() == "" {
 				continue
 			}
-			space, tab, _ := strings.Cut(t.Where, " / ")
+			space, tab, _ := strings.Cut(t.Labels["where"], " / ")
 			snap.Agents = append(snap.Agents, AgentView{
-				Terminal: t.Address, Status: t.Status, App: t.Agent, Space: space, Tab: tab,
+				Terminal: t.Address, Status: t.StatusState(), App: t.Program(), Space: space, Tab: tab,
 			})
 		}
 	} else {
-		snap.Error = err.Error()
+		if s.appErr != nil {
+			snap.Error = s.appErr.Error()
+		} else {
+			snap.Error = "no answer from Herdr yet"
+		}
 		return snap
 	}
 
+	// Pinned agents (terminal.pin): the label is on the terminal, so every Herdr client agrees.
 	for i := range snap.Agents {
-		snap.Agents[i].Pinned = pinned[snap.Agents[i].Terminal]
+		snap.Agents[i].Pinned = core[snap.Agents[i].Terminal].Labels[pinnedLabel] == "1"
 	}
 
 	// A sub-agent given its own pane (terminal.keep) is also a tab's terminal.
@@ -272,7 +386,7 @@ func (s *AgentService) collect(ctx context.Context) Snapshot {
 	for i := range snap.Agents {
 		snap.Agents[i].Children = buildChildren(snap.Agents[i].Terminal, children, core, map[string]bool{}, 0)
 	}
-	s.fillMeta(ctx, snap.Agents)
+	s.fillMeta(snap.Agents, core)
 	setDetails(snap.Agents)
 	s.setIcons(snap.Agents, true)
 
@@ -317,6 +431,19 @@ func urgency(a *AgentView) string {
 	return best
 }
 
+// liveStatus is a top-level agent's status: the core's, which arrives as it changes,
+// over Herdr's from the last herdr-app ls. But Herdr's idle for the core's done is
+// Herdr's own news (seen), and words Herdr maps itself (error) stay Herdr's.
+func liveStatus(app, core string) string {
+	if _, known := statusOrder[core]; !known {
+		return app
+	}
+	if core == "done" && app == "idle" {
+		return app
+	}
+	return core
+}
+
 // subStatus is how Herdr shows a sub-agent: never done (it reports to its parent,
 // and the parent's done is the news); an error counts as blocked.
 func subStatus(s string) string {
@@ -338,7 +465,7 @@ func changeKey(s string) string {
 	return s
 }
 
-func buildChildren(parent string, children map[string][]string, core map[string]herdr.CoreListTerminal, seen map[string]bool, depth int) []AgentView {
+func buildChildren(parent string, children map[string][]string, core map[string]herdr.Terminal, seen map[string]bool, depth int) []AgentView {
 	if depth >= maxDepth || seen[parent] {
 		return nil
 	}
@@ -347,9 +474,8 @@ func buildChildren(parent string, children map[string][]string, core map[string]
 	for _, addr := range children[parent] {
 		v := AgentView{Terminal: addr}
 		if t, ok := core[addr]; ok {
-			v.Status = subStatus(t.Status)
-			v.App = programName(t.Agent)
-			v.Name = t.Name
+			v.Status = subStatus(t.StatusState())
+			v.App = programName(t.Program())
 		}
 		v.Children = buildChildren(addr, children, core, seen, depth+1)
 		list = append(list, v)
@@ -379,77 +505,43 @@ func rank(status string) int {
 	return len(statusOrder)
 }
 
-// fillMeta adds details from `hc get`. Top-level agents are asked every time
-// (their title changes as they work, and it is shown); sub-agents only when they
-// appear or their status changes.
-func (s *AgentService) fillMeta(ctx context.Context, agents []AgentView) {
-	fresh := s.getAll(ctx, agents)
-
+// fillMeta adds the core's details: name, title, and when the status started.
+// The start is kept across done -> idle (see changeKey), so it is tracked here.
+func (s *AgentService) fillMeta(agents []AgentView, core map[string]herdr.Terminal) {
+	now := time.Now().UnixMilli()
 	seen := map[string]bool{}
 	var walk func(list []AgentView)
 	walk = func(list []AgentView) {
 		for i := range list {
 			a := &list[i]
 			seen[a.Terminal] = true
-			m, ok := s.meta[a.Terminal]
-			t, got := fresh[a.Terminal]
-			if !ok || m.status != changeKey(a.Status) {
-				m = termMeta{status: changeKey(a.Status), sinceMS: time.Now().UnixMilli()}
-				if !got {
-					t, _ = s.client.Get(ctx, a.Terminal)
+			t, got := core[a.Terminal]
+			m, ok := s.since[a.Terminal]
+			if !ok || m.key != changeKey(a.Status) {
+				m = since{key: changeKey(a.Status), ms: now}
+				if got && t.StatusMS > 0 {
+					m.ms = t.StatusMS
 				}
-				if t != nil && t.StatusMS > 0 {
-					m.sinceMS = t.StatusMS
-				}
+				s.since[a.Terminal] = m
 			}
-			if t != nil {
-				m.title = t.Title
-				if t.Name != nil {
-					m.name = *t.Name
-				}
-			}
-			s.meta[a.Terminal] = m
 			if a.Status != "" {
-				a.SinceMS = m.sinceMS
+				a.SinceMS = m.ms
 			}
-			if a.Name == "" {
-				a.Name = m.name
+			if got {
+				if a.Name == "" && t.Name != nil {
+					a.Name = *t.Name
+				}
+				a.Title = t.Title
 			}
-			a.Title = m.title
 			walk(a.Children)
 		}
 	}
 	walk(agents)
-	for k := range s.meta {
+	for k := range s.since {
 		if !seen[k] {
-			delete(s.meta, k)
+			delete(s.since, k)
 		}
 	}
-}
-
-// getAll runs `hc get` for the top-level agents, a few at a time.
-func (s *AgentService) getAll(ctx context.Context, agents []AgentView) map[string]*herdr.CoreTerminal {
-	var (
-		mu  sync.Mutex
-		wg  sync.WaitGroup
-		out = map[string]*herdr.CoreTerminal{}
-		sem = make(chan struct{}, 4)
-	)
-	for _, a := range agents {
-		wg.Add(1)
-		go func(addr string) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-			if t, err := s.client.Get(ctx, addr); err == nil {
-				mu.Lock()
-				out[addr] = t
-				mu.Unlock()
-			}
-		}(a.Terminal)
-	}
-	wg.Wait()
-	return out
 }
 
 const pinnedLabel = "herdr.pinned"

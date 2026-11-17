@@ -87,8 +87,8 @@ herdr_app: ""     # herdr-app executable; empty: from PATH
 hc: ""            # hc executable; empty: from PATH
 herdr_home: ""    # Herdr's app folder (icons); empty: $HERDR_APP_HOME, else ~/.config/herdr-app
 start_herdr: true # start Herdr on startup when it isn't running
-interval: 5s      # how often to refresh while the window is shown
-hidden_interval: 10s # ... and while it is hidden (showing it refreshes at once)
+interval: 10s     # how often to re-read Herdr's spaces and tabs while the window is shown
+hidden_interval: 30s # ... and while it is hidden (statuses update live either way)
 css: user.css     # your stylesheet, relative to this file; reloaded when it changes
 theme: system     # system (follow the OS), light or dark; also set from the tray menu
 grow: up          # the window's height follows the list: up (bottom edge stays) or down (top edge stays); also set from the tray menu

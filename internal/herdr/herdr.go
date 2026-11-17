@@ -32,58 +32,9 @@ func (c *Client) core() string {
 	return "hc"
 }
 
-// CoreTerminal is the part of `hc get <t> --json` we use.
-type CoreTerminal struct {
-	Address  string  `json:"address"`
-	StatusMS int64   `json:"status_ms"` // when the status last changed (unix ms)
-	Title    string  `json:"title"`
-	Name     *string `json:"name"`
-}
-
-// Get runs `hc get <terminal> --json`.
-func (c *Client) Get(ctx context.Context, terminal string) (*CoreTerminal, error) {
-	out, err := c.run(ctx, c.core(), "get", terminal, "--json")
-	if err != nil {
-		return nil, err
-	}
-	var t CoreTerminal
-	if err := json.Unmarshal(out, &t); err != nil {
-		return nil, fmt.Errorf("hc get: %w", err)
-	}
-	return &t, nil
-}
-
-// CoreList is the output of `hc ls --json`.
-type CoreList struct {
-	Terminals []CoreListTerminal `json:"terminals"`
-}
-
-type CoreListTerminal struct {
-	Address string `json:"address"`
-	Agent   string `json:"agent"`  // the program (a path for some shells)
-	Status  string `json:"status"` // "" for terminals that aren't agents
-	Parent  string `json:"parent"` // the terminal that started it with `hc run`
-	Name    string `json:"name"`   // hc run --name
-	Where   string `json:"where"`  // "space / tab"
-}
-
-// CoreLs runs `hc ls --json`: works without the Herdr window.
-// labels ("k=v") keep only the terminals carrying all of them.
-func (c *Client) CoreLs(ctx context.Context, labels ...string) (*CoreList, error) {
-	args := []string{"ls", "--json"}
-	for _, l := range labels {
-		args = append(args, "--label", l)
-	}
-	out, err := c.run(ctx, c.core(), args...)
-	if err != nil {
-		return nil, err
-	}
-	var l CoreList
-	if err := json.Unmarshal(out, &l); err != nil {
-		return nil, fmt.Errorf("hc ls: %w", err)
-	}
-	return &l, nil
-}
+// waitDelay is how long Wait waits for the pipes after the program ended (or was
+// killed): a child that inherited them can't hold the caller forever.
+const waitDelay = 2 * time.Second
 
 func (c *Client) run(ctx context.Context, name string, args ...string) ([]byte, error) {
 	timeout := c.Timeout
@@ -95,10 +46,17 @@ func (c *Client) run(ctx context.Context, name string, args ...string) ([]byte, 
 
 	cmd := exec.CommandContext(ctx, name, args...)
 	hideWindow(cmd)
+	cmd.WaitDelay = waitDelay
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	t := newTree(cmd) // a timeout kills a shim's child too
+	err := t.start()
+	if err == nil {
+		err = cmd.Wait()
+	}
+	t.close()
+	if err != nil {
 		msg := strings.TrimSpace(stderr.String())
 		if msg == "" {
 			msg = strings.TrimSpace(stdout.String())
