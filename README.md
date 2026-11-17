@@ -61,7 +61,8 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **⌄** (on rows with sub-agents): collapse or expand them
 - **Pin** (on hover, in place of the elapsed time): pin or unpin
 - **Title bar**: drag to move; ⟳ refreshes now; × hides the window
-- **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Theme (System / Light / Dark), Refresh and Quit
+- **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Theme (System / Light / Dark), Grow (Upward / Downward), Refresh and Quit
+- **Window height**: follows the list, so the rows just fit. It grows upward (the bottom edge stays) or downward (the top edge stays), as chosen in the tray menu's Grow; at the edge of the screen it stops and the list scrolls
 - **Tray badge**: a dot on the tray icon for the most urgent group: red (Needs you), blue (Done) or yellow (Working); none when all are idle. The tooltip has the counts (not on macOS, which has no tray tooltips)
 
 When Herdr's window isn't running, hcagents still lists the agents from herdr-core
@@ -89,8 +90,9 @@ start_herdr: true # start Herdr on startup when it isn't running
 interval: 3s      # how often to refresh
 css: user.css     # your stylesheet, relative to this file; reloaded when it changes
 theme: system     # system (follow the OS), light or dark; also set from the tray menu
+grow: up          # the window's height follows the list: up (bottom edge stays) or down (top edge stays); also set from the tray menu
 window:
-  width: 280      # size on first start
+  width: 280      # size on first start (the height then follows the list)
   height: 360
   always_on_top: true
 ```
@@ -98,7 +100,7 @@ window:
 On macOS, apps started from Finder don't get your shell's `PATH` or `HERDR_APP_HOME`,
 so set `herdr_app`, `hc` and `herdr_home` there.
 
-Choosing a theme from the tray menu writes `theme:` to the config file in use, changing only that line.
+Choosing a theme or a grow direction from the tray menu writes `theme:` or `grow:` to the config file in use, changing only that line.
 With no config file, hcagents creates `hcagents.yaml` next to the executable (or, when that folder can't be written, and on macOS, in the config folder above).
 
 The window's position and size are saved in `state.yaml`, next to `hcagents.yaml`

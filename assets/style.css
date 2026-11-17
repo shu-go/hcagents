@@ -122,8 +122,11 @@ html, body {
 .message.is-error { color: var(--color-blocked); }
 
 /* ---- list ---- */
+/* Its own height, not the window's: the window is made as tall as this
+   (app.js fitWindow) and it scrolls only when the screen is too short. */
 .agents {
-  flex: 1;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 0 6px 8px;
 }

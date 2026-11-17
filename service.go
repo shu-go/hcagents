@@ -74,6 +74,8 @@ type AgentService struct {
 	// onSnapshot, when set, gets each new snapshot (for the tray). Unexported:
 	// Wails binds only exported methods and fields stay out of the bindings.
 	onSnapshot func(Snapshot)
+	// onFit, when set, resizes the window to the page's content (FitHeight).
+	onFit func(content, inner int)
 }
 
 type termMeta struct {
@@ -609,6 +611,33 @@ func (s *AgentService) SetTheme(theme string) {
 		log.Println("save theme:", err)
 	}
 	s.emitTheme()
+}
+
+// FitHeight makes the window as tall as the page's content: content is the height
+// the page needs, inner its current viewport height (both in CSS px).
+func (s *AgentService) FitHeight(content, inner int) {
+	if s.onFit != nil {
+		s.onFit(content, inner)
+	}
+}
+
+// grow is the grow setting ("up" or "down").
+func (s *AgentService) grow() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.Grow
+}
+
+// setGrow switches the way the window grows ("up" or "down") and saves it in the config file.
+func (s *AgentService) setGrow(grow string) {
+	grow = config.NormalizeGrow(grow)
+	s.mu.Lock()
+	s.cfg.Grow = grow
+	err := s.cfg.SetValue("grow", grow)
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save grow:", err)
+	}
 }
 
 // UserCSS returns the user's stylesheet ("" if none).

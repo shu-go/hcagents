@@ -32,6 +32,9 @@ type Config struct {
 	CSS string `yaml:"css"`
 	// Theme is "system" (follow the OS), "light" or "dark". Set from the tray menu too.
 	Theme string `yaml:"theme"`
+	// Grow is the way the window grows and shrinks as its height follows the list:
+	// "up" (the bottom edge stays) or "down" (the top edge stays). Set from the tray menu too.
+	Grow string `yaml:"grow"`
 
 	Window Window `yaml:"window"`
 
@@ -50,6 +53,7 @@ func Default() *Config {
 		StartHerdr: true,
 		Interval:   Duration(3 * time.Second),
 		Theme:      ThemeSystem,
+		Grow:       GrowUp,
 		Window: Window{
 			Width:       280,
 			Height:      360,
@@ -95,7 +99,21 @@ func Load() (*Config, error) {
 		cfg.Interval = Default().Interval
 	}
 	cfg.Theme = NormalizeTheme(cfg.Theme)
+	cfg.Grow = NormalizeGrow(cfg.Grow)
 	return cfg, nil
+}
+
+const (
+	GrowUp   = "up"
+	GrowDown = "down"
+)
+
+// NormalizeGrow returns "down" as it is (any case), else "up".
+func NormalizeGrow(s string) string {
+	if g := strings.ToLower(strings.TrimSpace(s)); g == GrowDown {
+		return g
+	}
+	return GrowUp
 }
 
 const (

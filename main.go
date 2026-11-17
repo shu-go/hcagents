@@ -70,6 +70,9 @@ func main() {
 	})
 
 	ws := trackWindowState(app, win, statePath)
+	// The window's height follows the list (the page asks with FitHeight).
+	fitter := &windowFitter{win: win, grow: svc.grow}
+	svc.onFit = fitter.fit
 
 	toggle := func() {
 		if win.IsVisible() {
@@ -106,6 +109,15 @@ func main() {
 	} {
 		themeMenu.AddRadio(t.label, cfg.Theme == t.value).OnClick(func(*application.Context) {
 			svc.SetTheme(t.value)
+		})
+	}
+	growMenu := menu.AddSubmenu("Grow")
+	for _, g := range []struct{ label, value string }{
+		{"Upward", config.GrowUp},
+		{"Downward", config.GrowDown},
+	} {
+		growMenu.AddRadio(g.label, cfg.Grow == g.value).OnClick(func(*application.Context) {
+			svc.setGrow(g.value)
 		})
 	}
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })

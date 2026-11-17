@@ -22,6 +22,7 @@ const PIN_SVG =
 const PIN_OFF_SVG =
   '<svg viewBox="0 0 16 16" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4M7 2.5v4L4.5 9.5h7L9 6.5v-4M8 9.5V14M2.5 2.5l11 11"/></svg>';
 
+const $titlebar = document.querySelector(".titlebar");
 const $agents = document.querySelector(".agents");
 const $message = document.querySelector(".message");
 const $source = document.querySelector(".titlebar-source");
@@ -117,6 +118,7 @@ function icon(className, item) {
 function showError(e) {
   $message.classList.add("is-error");
   $message.textContent = String(e?.message ?? e);
+  fitWindow();
 }
 
 // starting: the terminal clicked while Herdr wasn't running, until Herdr is up
@@ -248,10 +250,24 @@ function render(snap) {
     addGroup(`is-${g.status}`, g.label, agents.filter((a) => !a.pinned && (a.group || a.status) === g.status));
   }
   $agents.replaceChildren(...groups);
+  fitWindow();
+}
+
+// ---- window height: as tall as the content (the app grows it up or down) ----
+let lastFit = "";
+function fitWindow() {
+  // scrollHeight: the list's full height, even while it scrolls.
+  const content = Math.ceil($titlebar.offsetHeight + $message.offsetHeight + $agents.scrollHeight);
+  const inner = window.innerHeight;
+  const key = `${content}/${inner}`;
+  if (key === lastFit) return; // nothing changed since the last ask
+  lastFit = key;
+  call("FitHeight", content, inner).catch(() => {});
 }
 
 function setCSS(css) {
   $userCSS.textContent = css || "";
+  fitWindow();
 }
 
 // ---- theme: <html data-theme> is "light" or "dark" ----
@@ -277,6 +293,9 @@ wails.Events.On("theme", (ev) => setTheme(ev.data));
 
 // Elapsed times keep moving between refreshes.
 setInterval(() => last && render(last), 30000);
+
+// A web font or the user's CSS may change the rows' height after a render.
+document.fonts?.ready.then(fitWindow);
 
 call("UserCSS").then(setCSS);
 call("Theme").then(setTheme);
