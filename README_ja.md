@@ -76,7 +76,8 @@ herdr_app: ""     # herdr-app の実行ファイル。空なら PATH から探�
 hc: ""            # hc の実行ファイル。空なら PATH から探す
 herdr_home: ""    # Herdr のアプリフォルダ(アイコン用)。空なら $HERDR_APP_HOME、なければ ~/.config/herdr-app
 start_herdr: true # 起動時、Herdr が起動していなければ起動する
-interval: 3s      # 更新間隔
+interval: 5s      # ウィンドウ表示中の更新間隔
+hidden_interval: 10s # 非表示中の更新間隔(表示したときはすぐ更新する)
 css: user.css     # 自分のスタイルシート。このファイルからの相対パス。変更すると自動で再読み込み
 theme: system     # 配色。system(OS に合わせる)、light、dark。トレイメニューからも変えられる
 grow: up          # 一覧に合わせて高さを変える向き。up(下端を固定)か down(上端を固定)。トレイメニューからも変えられる

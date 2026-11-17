@@ -76,6 +76,8 @@ type AgentService struct {
 	onSnapshot func(Snapshot)
 	// onFit, when set, resizes the window to the page's content (FitHeight).
 	onFit func(content, inner int)
+	// visible, when set, tells whether the window is shown (for the refresh interval).
+	visible func() bool
 }
 
 type termMeta struct {
@@ -142,10 +144,11 @@ func (s *AgentService) ensureHerdr(ctx context.Context) error {
 }
 
 func (s *AgentService) loop(ctx context.Context) {
-	t := time.NewTicker(s.cfg.Interval.Std())
+	t := time.NewTimer(s.interval()) // Reset below drops a stale tick (Go 1.23+ timers)
 	defer t.Stop()
 	for {
 		s.poll(ctx)
+		t.Reset(s.interval())
 		select {
 		case <-ctx.Done():
 			return
@@ -153,6 +156,15 @@ func (s *AgentService) loop(ctx context.Context) {
 		case <-s.refresh:
 		}
 	}
+}
+
+// interval is the time until the next refresh: longer while the window is hidden
+// (hc and herdr-app are called less often; the tray badge still follows).
+func (s *AgentService) interval() time.Duration {
+	if s.visible != nil && !s.visible() {
+		return s.cfg.HiddenInterval.Std()
+	}
+	return s.cfg.Interval.Std()
 }
 
 func (s *AgentService) poll(ctx context.Context) {

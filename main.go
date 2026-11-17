@@ -26,6 +26,12 @@ func main() {
 	// exits: it lets the running one take the foreground (Windows).
 	allowForeground()
 	var win *application.WebviewWindow
+	// show shows the window and refreshes at once: while hidden, the list was
+	// refreshed less often (hidden_interval).
+	show := func() {
+		win.Show()
+		svc.Refresh()
+	}
 	app := application.New(application.Options{
 		Name:        "hcagents",
 		Description: "Herdr agents at a glance",
@@ -34,7 +40,7 @@ func main() {
 			UniqueID: "com.github.shu-go.hcagents",
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				if win != nil {
-					win.Show()
+					show()
 					win.Focus()
 				}
 			},
@@ -73,12 +79,13 @@ func main() {
 	// The window's height follows the list (the page asks with FitHeight).
 	fitter := &windowFitter{win: win, grow: svc.grow}
 	svc.onFit = fitter.fit
+	svc.visible = win.IsVisible
 
 	toggle := func() {
 		if win.IsVisible() {
 			win.Hide()
 		} else {
-			win.Show()
+			show()
 		}
 	}
 

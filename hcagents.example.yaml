@@ -20,8 +20,10 @@ herdr_home: ""
 # Start Herdr (herdr-app) on startup when it isn't running.
 start_herdr: true
 
-# How often to refresh.
-interval: 3s
+# How often to refresh while the window is shown, and while it is hidden
+# (the tray badge still follows). Showing the window refreshes at once.
+interval: 5s
+hidden_interval: 10s
 
 # Your stylesheet, loaded after the built-in one (assets/style.css).
 # Relative to this file's folder. Reloaded when it changes.
