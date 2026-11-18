@@ -96,7 +96,23 @@ func main() {
 	setTrayIcon(tray, trayU.icons[""])
 	tray.SetTooltip("hcagents")
 	tray.OnClick(toggle)
-	svc.onSnapshot = func(snap Snapshot) { trayU.update(trayStateOf(snap)) }
+	auto := newAutoShow()
+	svc.onSnapshot = func(snap Snapshot) {
+		trayU.update(trayStateOf(snap))
+		if !cfg.AutoHide {
+			return
+		}
+		switch auto.next(snap) {
+		case +1:
+			if !win.IsVisible() {
+				win.Show() // a background app can't take the foreground: no focus theft
+			}
+		case -1:
+			if win.IsVisible() {
+				win.Hide()
+			}
+		}
+	}
 	// macOS draws the glyph in black or white by dark mode (see tray_darwin.go).
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { trayU.reapply() })
 	app.Event.OnApplicationEvent(events.Common.ThemeChanged, func(*application.ApplicationEvent) { trayU.reapply() })

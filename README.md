@@ -92,6 +92,7 @@ hidden_interval: 30s # ... and while it is hidden (statuses update live either w
 css: user.css     # your stylesheet, relative to this file; reloaded when it changes
 theme: system     # system (follow the OS), light or dark; also set from the tray menu
 grow: up          # the window's height follows the list: up (bottom edge stays) or down (top edge stays); also set from the tray menu
+auto_hide: true   # hide the window when the last agent goes, show it when agents appear again
 window:
   width: 280      # size on first start (the height then follows the list)
   height: 360

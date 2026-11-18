@@ -38,6 +38,9 @@ type Config struct {
 	// Grow is the way the window grows and shrinks as its height follows the list:
 	// "up" (the bottom edge stays) or "down" (the top edge stays). Set from the tray menu too.
 	Grow string `yaml:"grow"`
+	// AutoHide hides the window when the last agent goes, and shows it again
+	// when agents appear in the empty list.
+	AutoHide bool `yaml:"auto_hide"`
 
 	Window Window `yaml:"window"`
 
@@ -58,6 +61,7 @@ func Default() *Config {
 		HiddenInterval: Duration(30 * time.Second),
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
+		AutoHide:       true,
 		Window: Window{
 			Width:       280,
 			Height:      360,

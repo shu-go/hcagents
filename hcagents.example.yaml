@@ -39,6 +39,10 @@ theme: system
 # tray menu (Grow), which saves the choice here.
 grow: up
 
+# Hide the window when the last agent goes, and show it again when agents
+# appear in the empty list. A window shown or hidden by hand stays so until then.
+auto_hide: true
+
 # Size on first start (the height then follows the list). After that the window
 # opens where you left it (saved in state.yaml next to this file; delete it to reset).
 window:
