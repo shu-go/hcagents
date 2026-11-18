@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"strconv"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -69,21 +70,33 @@ func main() {
 	statePath := cfg.StatePath()
 	applySavedBounds(statePath, &winOpts) // where it was last time
 	win = app.Window.NewWithOptions(winOpts)
+
+	// The window's opacity (opacity:), full while the pointer is over it.
+	opacity := &opacityCtl{win: win, level: cfg.Opacity}
+	svc.onOpacity = opacity.set
+	svc.onHover = opacity.setHover
+	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) { opacity.apply() })
+	// hide hides the window. The pointer may leave it without the page noticing.
+	hide := func() {
+		win.Hide()
+		opacity.setHover(false)
+	}
+
 	// Closing the window hides it; quit from the tray.
 	win.RegisterHook(events.Common.WindowClosing, func(e *application.WindowEvent) {
-		win.Hide()
+		hide()
 		e.Cancel()
 	})
 
 	ws := trackWindowState(app, win, statePath)
 	// The window's height follows the list (the page asks with FitHeight).
-	fitter := &windowFitter{win: win, grow: svc.grow}
+	fitter := &windowFitter{win: win, grow: svc.grow, resized: opacity.apply}
 	svc.onFit = fitter.fit
 	svc.visible = win.IsVisible
 
 	toggle := func() {
 		if win.IsVisible() {
-			win.Hide()
+			hide()
 		} else {
 			show()
 		}
@@ -106,7 +119,7 @@ func main() {
 			}
 		case -1:
 			if win.IsVisible() {
-				win.Hide()
+				hide()
 			}
 		}
 	}
@@ -135,6 +148,14 @@ func main() {
 		{"When all idle", config.AutoHideIdle},
 		{"Off", config.AutoHideOff},
 	})
+	var opacities []radioChoice
+	for pct := config.MaxOpacity; pct >= config.MinOpacity; pct -= 10 {
+		opacities = append(opacities, radioChoice{strconv.Itoa(pct) + "%", strconv.Itoa(pct)})
+	}
+	addRadios(menu.AddSubmenu("Opacity"), strconv.Itoa(cfg.Opacity), func(v string) {
+		pct, _ := strconv.Atoi(v)
+		svc.setOpacity(pct)
+	}, opacities)
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) {

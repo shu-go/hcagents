@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -90,6 +91,9 @@ type AgentService struct {
 	onFit func(content, inner int)
 	// visible, when set, tells whether the window is shown (for the refresh interval).
 	visible func() bool
+	// onOpacity and onHover, when set, change the window's opacity (opacityCtl).
+	onOpacity func(pct int)
+	onHover   func(over bool)
 }
 
 type since struct {
@@ -760,6 +764,28 @@ func (s *AgentService) setAutoHide(mode string) {
 	s.mu.Unlock()
 	if err != nil {
 		log.Println("save auto_hide:", err)
+	}
+}
+
+// setOpacity switches the window's opacity (percent) and saves it in the config file.
+func (s *AgentService) setOpacity(pct int) {
+	pct = config.NormalizeOpacity(pct)
+	s.mu.Lock()
+	s.cfg.Opacity = pct
+	err := s.cfg.SetValue("opacity", strconv.Itoa(pct))
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save opacity:", err)
+	}
+	if s.onOpacity != nil {
+		s.onOpacity(pct)
+	}
+}
+
+// Hover tells whether the pointer is over the page: the window is opaque meanwhile.
+func (s *AgentService) Hover(over bool) {
+	if s.onHover != nil {
+		s.onHover(over)
 	}
 }
 

@@ -285,7 +285,25 @@ function setTheme(t) {
 }
 
 document.querySelector(".refresh-button").addEventListener("click", () => call("Refresh"));
-document.querySelector(".hide-button").addEventListener("click", () => wails.Window.Hide());
+document.querySelector(".hide-button").addEventListener("click", () => {
+  setHover(false);
+  wails.Window.Hide();
+});
+
+// The window is opaque while the pointer is over it (opacity:). A move resends
+// now and then: the app forgets the hover when it hides the window itself.
+let hovering = false;
+let hoverSent = 0;
+function setHover(on) {
+  const now = Date.now();
+  if (on === hovering && (!on || now - hoverSent < 1000)) return;
+  hovering = on;
+  hoverSent = now;
+  call("Hover", on).catch(() => {});
+}
+document.documentElement.addEventListener("pointerenter", () => setHover(true));
+document.documentElement.addEventListener("pointermove", () => setHover(true));
+document.documentElement.addEventListener("pointerleave", () => setHover(false));
 
 wails.Events.On("agents", (ev) => render(ev.data));
 wails.Events.On("css", (ev) => setCSS(ev.data));

@@ -4,7 +4,7 @@
 #   macOS:   ~/Library/Application Support/hcagents/hcagents.yaml
 #   Linux:   ~/.config/hcagents/hcagents.yaml
 # The first one found is used. Changes apply on restart (css: live).
-# hcagents writes to this file itself only for theme:, grow: and auto_hide: (the tray menu).
+# hcagents writes to this file itself only for theme:, grow:, auto_hide: and opacity: (the tray menu).
 # With no file, it creates one next to the executable.
 
 # herdr-app and hc executables. Empty: looked up in PATH.
@@ -46,6 +46,10 @@ grow: up
 # A window shown or hidden by hand stays so until the next such change.
 # Also set from the tray menu (Auto hide), which saves the choice here.
 auto_hide: empty
+
+# Opacity of the whole window in percent: 30 to 100, in steps of 10. While the
+# pointer is over the window it is fully opaque. Also set from the tray menu (Opacity).
+opacity: 100
 
 # Size on first start (the height then follows the list). After that the window
 # opens where you left it (saved in state.yaml next to this file; delete it to reset).

@@ -42,6 +42,9 @@ type Config struct {
 	// agent goes, show when agents appear), "idle" (hide when all agents are idle,
 	// show when one isn't) or "off". Set from the tray menu too.
 	AutoHide string `yaml:"auto_hide"`
+	// Opacity of the whole window in percent: 30 to 100, in steps of 10. The window
+	// is opaque while the pointer is over it. Set from the tray menu too.
+	Opacity int `yaml:"opacity"`
 
 	Window Window `yaml:"window"`
 
@@ -63,6 +66,7 @@ func Default() *Config {
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
 		AutoHide:       AutoHideEmpty,
+		Opacity:        MaxOpacity,
 		Window: Window{
 			Width:       280,
 			Height:      360,
@@ -113,7 +117,19 @@ func Load() (*Config, error) {
 	cfg.Theme = NormalizeTheme(cfg.Theme)
 	cfg.Grow = NormalizeGrow(cfg.Grow)
 	cfg.AutoHide = NormalizeAutoHide(cfg.AutoHide)
+	cfg.Opacity = NormalizeOpacity(cfg.Opacity)
 	return cfg, nil
+}
+
+const (
+	MinOpacity = 30 // lower and the window is hard to find
+	MaxOpacity = 100
+)
+
+// NormalizeOpacity rounds a percentage to a step of 10 within MinOpacity..MaxOpacity.
+func NormalizeOpacity(pct int) int {
+	pct = (pct + 5) / 10 * 10
+	return max(MinOpacity, min(MaxOpacity, pct))
 }
 
 const (
