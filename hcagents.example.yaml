@@ -4,7 +4,7 @@
 #   macOS:   ~/Library/Application Support/hcagents/hcagents.yaml
 #   Linux:   ~/.config/hcagents/hcagents.yaml
 # The first one found is used. Changes apply on restart (css: live).
-# hcagents writes to this file itself only for theme: and grow: (the tray menu).
+# hcagents writes to this file itself only for theme:, grow: and auto_hide: (the tray menu).
 # With no file, it creates one next to the executable.
 
 # herdr-app and hc executables. Empty: looked up in PATH.
@@ -39,9 +39,13 @@ theme: system
 # tray menu (Grow), which saves the choice here.
 grow: up
 
-# Hide the window when the last agent goes, and show it again when agents
-# appear in the empty list. A window shown or hidden by hand stays so until then.
-auto_hide: true
+# The window hides and shows itself:
+#   empty: hide when the last agent goes, show when agents appear again
+#   idle:  hide when all agents are idle, show when one isn't (working, done, needs you)
+#   off:   never
+# A window shown or hidden by hand stays so until the next such change.
+# Also set from the tray menu (Auto hide), which saves the choice here.
+auto_hide: empty
 
 # Size on first start (the height then follows the list). After that the window
 # opens where you left it (saved in state.yaml next to this file; delete it to reset).

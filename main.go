@@ -99,10 +99,7 @@ func main() {
 	auto := newAutoShow()
 	svc.onSnapshot = func(snap Snapshot) {
 		trayU.update(trayStateOf(snap))
-		if !cfg.AutoHide {
-			return
-		}
-		switch auto.next(snap) {
+		switch auto.next(snap, svc.autoHide()) {
 		case +1:
 			if !win.IsVisible() {
 				win.Show() // a background app can't take the foreground: no focus theft
@@ -132,6 +129,11 @@ func main() {
 	addRadios(menu.AddSubmenu("Grow"), cfg.Grow, svc.setGrow, []radioChoice{
 		{"Upward", config.GrowUp},
 		{"Downward", config.GrowDown},
+	})
+	addRadios(menu.AddSubmenu("Auto hide"), cfg.AutoHide, svc.setAutoHide, []radioChoice{
+		{"When no agents", config.AutoHideEmpty},
+		{"When all idle", config.AutoHideIdle},
+		{"Off", config.AutoHideOff},
 	})
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })
 	menu.AddSeparator()

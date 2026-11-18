@@ -38,9 +38,10 @@ type Config struct {
 	// Grow is the way the window grows and shrinks as its height follows the list:
 	// "up" (the bottom edge stays) or "down" (the top edge stays). Set from the tray menu too.
 	Grow string `yaml:"grow"`
-	// AutoHide hides the window when the last agent goes, and shows it again
-	// when agents appear in the empty list.
-	AutoHide bool `yaml:"auto_hide"`
+	// AutoHide hides and shows the window by itself: "empty" (hide when the last
+	// agent goes, show when agents appear), "idle" (hide when all agents are idle,
+	// show when one isn't) or "off". Set from the tray menu too.
+	AutoHide string `yaml:"auto_hide"`
 
 	Window Window `yaml:"window"`
 
@@ -61,7 +62,7 @@ func Default() *Config {
 		HiddenInterval: Duration(30 * time.Second),
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
-		AutoHide:       true,
+		AutoHide:       AutoHideEmpty,
 		Window: Window{
 			Width:       280,
 			Height:      360,
@@ -111,7 +112,26 @@ func Load() (*Config, error) {
 	}
 	cfg.Theme = NormalizeTheme(cfg.Theme)
 	cfg.Grow = NormalizeGrow(cfg.Grow)
+	cfg.AutoHide = NormalizeAutoHide(cfg.AutoHide)
 	return cfg, nil
+}
+
+const (
+	AutoHideOff   = "off"
+	AutoHideEmpty = "empty"
+	AutoHideIdle  = "idle"
+)
+
+// NormalizeAutoHide returns "idle" or "off" (also false/no) as they are (any
+// case), else "empty" (also true, from when auto_hide was a yes/no setting).
+func NormalizeAutoHide(s string) string {
+	switch a := strings.ToLower(strings.TrimSpace(s)); a {
+	case AutoHideIdle, AutoHideOff:
+		return a
+	case "false", "no":
+		return AutoHideOff
+	}
+	return AutoHideEmpty
 }
 
 const (
