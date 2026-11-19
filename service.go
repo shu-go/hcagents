@@ -672,6 +672,48 @@ func (s *AgentService) Focus(terminal string) error {
 	return focus()
 }
 
+// focusFirst does what a click on the list's top row does; with no agents listed,
+// it shows Herdr's window instead (starting Herdr if needed). For the tray's double click.
+func (s *AgentService) focusFirst() {
+	s.mu.Lock()
+	terminal := firstAgent(s.last)
+	s.mu.Unlock()
+	var err error
+	if terminal != "" {
+		err = s.Focus(terminal)
+	} else {
+		ctx := context.Background()
+		if _, lsErr := s.client.Ls(ctx); lsErr == nil {
+			err = s.client.Open() // hands over to the running Herdr, which comes to the front
+		} else {
+			err = s.ensureHerdr(ctx)
+		}
+	}
+	if err != nil {
+		log.Println("tray double click:", err)
+	}
+}
+
+// firstAgent is the terminal of the top row as the page draws it: pinned agents
+// first, then the sections in order (snap.Agents is sorted by section). "" if none.
+func firstAgent(snap Snapshot) string {
+	for _, a := range snap.Agents {
+		if a.Pinned {
+			return a.Terminal
+		}
+	}
+	for _, a := range snap.Agents {
+		g := a.Group
+		if g == "" {
+			g = a.Status
+		}
+		if _, listed := statusOrder[g]; listed { // the page has no section for others
+			return a.Terminal
+		}
+	}
+	return ""
+}
+
 // Icon returns the picture for an AgentView's Icon key as a data: URL, taken from
 // Herdr's home (icons/), or "" when Herdr has none there.
 func (s *AgentService) Icon(key string) (string, error) {

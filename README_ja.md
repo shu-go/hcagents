@@ -53,7 +53,7 @@ Task を使わずに `go build -ldflags "-H windowsgui" .`(Windows)や `go build
 - **⌄**(サブエージェントがある行): サブエージェントを折りたたむ / 開く
 - **ピン**(マウスを乗せると経過時間の位置に出ます): ピン留め / 解除
 - **タイトルバー**: ドラッグで移動。⟳ ですぐに更新、× でウィンドウを隠す
-- **トレイアイコン**: クリックで表示 / 非表示。メニューには Show / Hide、Always on top、Theme(System / Light / Dark)、Grow(Upward / Downward)、Auto hide(When no agents / When all idle / Off)、Opacity(100%〜30%)、Refresh、Quit があります。
+- **トレイアイコン**: クリックで表示 / 非表示。ダブルクリック(Windows)で、一覧の一番上のエージェントに Herdr を切り替えます(その行をクリックしたのと同じ)。エージェントがいなければ、Herdr のウィンドウを開くだけです。メニューには Show / Hide、Always on top、Theme(System / Light / Dark)、Grow(Upward / Downward)、Auto hide(When no agents / When all idle / Off)、Opacity(100%〜30%)、Refresh、Quit があります。
 - **ウィンドウの高さ**: 一覧に合わせて、行がちょうど収まる高さに変わります。伸び縮みする向きはトレイメニューの Grow で選べます。上向き(下端を固定)か下向き(上端を固定)です。画面の端まで来るとそれ以上は伸びず、一覧がスクロールします
 - **自動で隠す・表示する**: エージェントがいなくなると(When all idle なら、すべてのエージェントが idle になると)ウィンドウを隠し、そうでなくなるとフォーカスを奪わずに表示します。手で表示・非表示にした場合は、次にこの変化が起きるまでそのままです
 - **不透明度**: ウィンドウ全体を半透明にできます(トレイメニューの Opacity、100%〜30%)。マウスを乗せている間は不透明になります

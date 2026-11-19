@@ -38,6 +38,11 @@ func (c *Client) WaitReady(ctx context.Context, timeout time.Duration) error {
 	}
 }
 
+// Open shows Herdr's window: it starts Herdr, or brings a running one to the front.
+func (c *Client) Open() error {
+	return c.launch()
+}
+
 // launch runs `herdr-app` without arguments and doesn't wait for it: it starts
 // Herdr, or (when it is running) a second instance hands over to it and exits.
 func (c *Client) launch() error {

@@ -61,7 +61,7 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **⌄** (on rows with sub-agents): collapse or expand them
 - **Pin** (on hover, in place of the elapsed time): pin or unpin
 - **Title bar**: drag to move; ⟳ refreshes now; × hides the window
-- **Tray icon**: click to show / hide; the menu has Show / Hide, Always on top, Theme (System / Light / Dark), Grow (Upward / Downward), Auto hide (When no agents / When all idle / Off), Opacity (100% to 30%), Refresh and Quit
+- **Tray icon**: click to show / hide. Double-click (Windows) to switch Herdr to the agent at the top of the list, as a click on its row does; with no agents, it just opens Herdr's window. The menu has Show / Hide, Always on top, Theme (System / Light / Dark), Grow (Upward / Downward), Auto hide (When no agents / When all idle / Off), Opacity (100% to 30%), Refresh and Quit
 - **Window height**: follows the list, so the rows just fit. It grows upward (the bottom edge stays) or downward (the top edge stays), as chosen in the tray menu's Grow; at the edge of the screen it stops and the list scrolls
 - **Auto hide**: the window hides itself when there are no agents (or, with When all idle, when every agent is idle) and comes back, without taking the focus, when that changes. A window shown or hidden by hand stays so until the next such change
 - **Opacity**: the whole window can be see-through (tray menu's Opacity, 100% to 30%); it turns opaque while the pointer is over it
