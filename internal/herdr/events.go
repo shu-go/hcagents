@@ -32,6 +32,17 @@ type Terminal struct {
 type TermStatus struct {
 	State string `json:"state"` // idle, working, done, blocked, error
 	App   string `json:"app"`
+	// Msg is the program's own line on what it does now (Claude Code: the running
+	// tool's description); "" when it says nothing.
+	Msg string `json:"msg"`
+}
+
+// StatusMsg is the status message, "" for none.
+func (t Terminal) StatusMsg() string {
+	if t.Status == nil {
+		return ""
+	}
+	return t.Status.Msg
 }
 
 // StatusState is the status, "" for a terminal that isn't an agent.
@@ -226,13 +237,13 @@ func (ts Terminals) Apply(ev Event, now int64) (changed, moved bool, err error) 
 		if !ok {
 			return false, false, nil
 		}
-		old, oldApp := t.StatusState(), t.Program()
+		old, oldApp, oldMsg := t.StatusState(), t.Program(), t.StatusMsg()
 		t.Status = d.Status
 		if t.StatusState() != old {
 			t.StatusMS = now // the event doesn't carry status_ms
 		}
-		// A new message alone isn't shown.
-		return t.StatusState() != old || t.Program() != oldApp, false, nil
+		// A new message alone counts too (status_msg: shows it).
+		return t.StatusState() != old || t.Program() != oldApp || t.StatusMsg() != oldMsg, false, nil
 	case "title":
 		var d struct {
 			Title string `json:"title"`

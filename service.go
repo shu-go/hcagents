@@ -41,6 +41,8 @@ type AgentView struct {
 	// Detail is what goes after the space name, as Herdr shows it: a named tab,
 	// else the agent's title when it tells something, else nothing.
 	Detail string `json:"detail"`
+	// Msg is the agent's own line on what it does now (status_msg: only).
+	Msg    string `json:"msg,omitempty"`
 	Pinned bool   `json:"pinned"`
 	// Children are the terminals this one started with `hc run` (sub-agents).
 	Children []AgentView `json:"children"`
@@ -193,12 +195,20 @@ func (s *AgentService) watch(ctx context.Context) {
 
 func (s *AgentService) onEvent(ev herdr.Event) {
 	s.coreMu.Lock()
+	var oldState, oldApp string
+	if t, ok := s.core[ev.Terminal]; ok && ev.Type == "status" {
+		oldState, oldApp = t.StatusState(), t.Program()
+	}
 	changed, moved, err := s.core.Apply(ev, time.Now().UnixMilli())
 	if ev.Type == "snapshot" {
 		s.coreOK = true
 	}
 	// A status change: Herdr's own view (done turns idle once seen) is read again too.
-	if moved || (changed && ev.Type == "status") {
+	// Not for a new message alone: those come often while an agent works.
+	if moved {
+		s.needLs = true
+	} else if t, ok := s.core[ev.Terminal]; ok && changed && ev.Type == "status" &&
+		(t.StatusState() != oldState || t.Program() != oldApp) {
 		s.needLs = true
 	}
 	s.coreMu.Unlock()
@@ -513,6 +523,9 @@ func rank(status string) int {
 // The start is kept across done -> idle (see changeKey), so it is tracked here.
 func (s *AgentService) fillMeta(agents []AgentView, core map[string]herdr.Terminal) {
 	now := time.Now().UnixMilli()
+	s.mu.Lock()
+	showMsg := s.cfg.StatusMsg
+	s.mu.Unlock()
 	seen := map[string]bool{}
 	var walk func(list []AgentView)
 	walk = func(list []AgentView) {
@@ -536,6 +549,9 @@ func (s *AgentService) fillMeta(agents []AgentView, core map[string]herdr.Termin
 					a.Name = *t.Name
 				}
 				a.Title = t.Title
+				if showMsg {
+					a.Msg = strings.TrimSpace(t.StatusMsg())
+				}
 			}
 			walk(a.Children)
 		}
@@ -807,6 +823,19 @@ func (s *AgentService) setAutoHide(mode string) {
 	if err != nil {
 		log.Println("save auto_hide:", err)
 	}
+}
+
+// setStatusMsg turns the agents' status messages on or off, saves it in the
+// config file, and redraws the list.
+func (s *AgentService) setStatusMsg(on bool) {
+	s.mu.Lock()
+	s.cfg.StatusMsg = on
+	err := s.cfg.SetValue("status_msg", strconv.FormatBool(on))
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save status_msg:", err)
+	}
+	s.Refresh()
 }
 
 // setOpacity switches the window's opacity (percent) and saves it in the config file.

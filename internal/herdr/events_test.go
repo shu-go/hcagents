@@ -11,6 +11,7 @@ const stream = `{"channel":null,"seq":10,"terminals":[{"address":"t1","state":"l
 {"jsonrpc":"2.0","method":"heartbeat","params":{"seq":10}}
 {"jsonrpc":"2.0","method":"event","params":{"seq":11,"type":"status","terminal":"t1","data":{"status":{"app":"claude-code","state":"done"},"records":{},"reported":true}}}
 {"jsonrpc":"2.0","method":"event","params":{"seq":12,"type":"title","terminal":"t1","data":{"title":"b"}}}
+{"jsonrpc":"2.0","method":"event","params":{"seq":13,"type":"status","terminal":"t1","data":{"status":{"app":"claude-code","state":"done","msg":"Run tests"}}}}
 {"jsonrpc":"2.0","method":"missed","params":{"seq":20,"terminals":[{"address":"t1","state":"live","title":"c"}]}}
 {"jsonrpc":"2.0","method":"event","params":{"seq":19,"type":"title","terminal":"t1","data":{"title":"stale"}}}
 {"jsonrpc":"2.0","method":"event","params":{"seq":21,"type":"labels","terminal":"t1","data":{"labels":{"herdr.pinned":"1"}}}}
@@ -44,6 +45,12 @@ func TestReadEventsApply(t *testing.T) {
 			if ts["t1"].Title != "b" {
 				t.Errorf("title: %q", ts["t1"].Title)
 			}
+			ts["t1"].StatusMS = 5
+		case 13:
+			// only the message changed: a change, but the status didn't start again
+			if tm := ts["t1"]; tm.StatusMsg() != "Run tests" || tm.StatusMS != 5 || !changed || moved {
+				t.Errorf("status msg: %+v changed=%v moved=%v", tm, changed, moved)
+			}
 		case 20:
 			if len(ts) != 1 || ts["t1"].Title != "c" {
 				t.Errorf("missed snapshot: %+v", ts)
@@ -65,7 +72,7 @@ func TestReadEventsApply(t *testing.T) {
 	if err == nil || err.Error() != "EOF" {
 		t.Errorf("err = %v, want EOF", err)
 	}
-	want := "snapshot status title snapshot labels created removed" // seq 19 dropped
+	want := "snapshot status title status snapshot labels created removed" // seq 19 dropped
 	if g := strings.Join(got, " "); g != want {
 		t.Errorf("events = %q, want %q", g, want)
 	}

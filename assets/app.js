@@ -147,6 +147,13 @@ function focusOnClick($row, terminal) {
   });
 }
 
+// msgLine is an agent's own line on what it does now (status_msg:), under its row.
+function msgLine(className, msg) {
+  const $msg = el("div", className, msg);
+  $msg.title = msg;
+  return $msg;
+}
+
 // renderChildren draws sub-agents (recursively) as a tree.
 function renderChildren(children) {
   const $list = el("div", "subagents");
@@ -163,6 +170,7 @@ function renderChildren(children) {
     );
     focusOnClick($row, c.terminal);
     $item.append($row);
+    if (c.msg) $item.append(msgLine("subagent-msg", c.msg));
     if (c.children && c.children.length) {
       $item.append(renderChildren(c.children));
     }
@@ -211,6 +219,7 @@ function renderAgent(a, now, canPin) {
   focusOnClick($row, a.terminal);
 
   $item.append($row);
+  if (a.msg) $item.append(msgLine("agent-msg", a.msg));
   if (hasChildren) $item.append(renderChildren(a.children));
   return $item;
 }

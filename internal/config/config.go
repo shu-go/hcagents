@@ -45,6 +45,10 @@ type Config struct {
 	// Opacity of the whole window in percent: 30 to 100, in steps of 10. The window
 	// is opaque while the pointer is over it. Set from the tray menu too.
 	Opacity int `yaml:"opacity"`
+	// StatusMsg shows each agent's own line on what it does now
+	// (the status report's msg, e.g. Claude Code's running tool) under its row.
+	// Set from the tray menu too.
+	StatusMsg bool `yaml:"status_msg"`
 
 	Window Window `yaml:"window"`
 
@@ -67,6 +71,7 @@ func Default() *Config {
 		Grow:           GrowUp,
 		AutoHide:       AutoHideEmpty,
 		Opacity:        MaxOpacity,
+		StatusMsg:      true,
 		Window: Window{
 			Width:       280,
 			Height:      360,

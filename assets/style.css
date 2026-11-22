@@ -25,10 +25,12 @@
               .agent-pin    (pin / unpin; shown on hover)
               .agent-elapsed
               .agent-status
+            .agent-msg     (status_msg: the agent's line on what it does now; only when it says one)
             .subagents                       (sub-agents, drawn as a tree)
               .subagent-item.is-<status>     (status "none": not an agent, e.g. a shell)
                 .subagent.is-<status> [.is-starting]
                   .subagent-icon (as .agent-icon) .subagent-name .subagent-status
+                .subagent-msg                (as .agent-msg)
                 .subagents                   (their own sub-agents, nested)
 */
 
@@ -317,6 +319,19 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---- status message (status_msg:): one line under the row, lined up with its name ---- */
+.agent-msg,
+.subagent-msg {
+  margin-top: -4px;
+  padding: 0 6px 4px calc(6px + 18px + 8px); /* row padding + icon + gap */
+  color: var(--color-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subagent-msg { margin-top: -3px; padding-left: calc(6px + 16px + 8px); }
 
 /* ---- status mark: a ring; spins while working ---- */
 .agent-status,

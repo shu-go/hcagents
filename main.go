@@ -173,6 +173,9 @@ func main() {
 		pct, _ := strconv.Atoi(v)
 		svc.setOpacity(pct)
 	}, opacities)
+	menu.AddCheckbox("Status messages", cfg.StatusMsg).OnClick(func(ctx *application.Context) {
+		svc.setStatusMsg(ctx.ClickedMenuItem().Checked())
+	})
 	menu.Add("Refresh").OnClick(func(*application.Context) { svc.Refresh() })
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) {
