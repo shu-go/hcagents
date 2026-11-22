@@ -4,7 +4,6 @@ import (
 	"embed"
 	"log"
 	"strconv"
-	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -109,23 +108,18 @@ func main() {
 	trayU := newTrayUpdater(tray, appIcon)
 	setTrayIcon(tray, trayU.icons[""])
 	tray.SetTooltip("hcagents")
-	// A double click (Windows) focuses the top agent, like a click on its row.
-	// Windows sends click, double click, click: the double click undoes the first
-	// click's toggle and drops the second, so the window stays as it was.
-	var dropClickUntil time.Time
-	tray.OnClick(func() {
-		if time.Now().Before(dropClickUntil) {
-			dropClickUntil = time.Time{}
-			return
-		}
-		toggle()
-	})
-	tray.OnDoubleClick(func() {
-		toggle()
-		dropClickUntil = time.Now().Add(time.Second)
-		allowForeground() // now, while the click lets us: Herdr comes to the front
-		go svc.focusFirst()
-	})
+	// A click toggles the window; a double click (Windows) focuses the top agent,
+	// like a click on its row, and leaves the window as it is (clickGate).
+	clicks := &clickGate{
+		delay:  doubleClickTime(),
+		single: toggle,
+		double: func() {
+			allowForeground() // now, while the click lets us: Herdr comes to the front
+			go svc.focusFirst()
+		},
+	}
+	tray.OnClick(clicks.click)
+	tray.OnDoubleClick(clicks.doubleClick)
 	auto := newAutoShow()
 	svc.onSnapshot = func(snap Snapshot) {
 		trayU.update(trayStateOf(snap))
