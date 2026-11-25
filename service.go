@@ -86,9 +86,10 @@ type AgentService struct {
 
 	startMu sync.Mutex // one Herdr start (and wait) at a time
 
-	// onSnapshot, when set, gets each new snapshot (for the tray). Unexported:
-	// Wails binds only exported methods and fields stay out of the bindings.
-	onSnapshot func(Snapshot)
+	// onSnapshot, when set, gets each new snapshot: all agents (for the tray) and
+	// those the page lists (show:). Unexported: Wails binds only exported methods
+	// and fields stay out of the bindings.
+	onSnapshot func(all, shown Snapshot)
 	// onFit, when set, resizes the window to the page's content (FitHeight).
 	onFit func(content, inner int)
 	// visible, when set, tells whether the window is shown (for the refresh interval).
@@ -291,17 +292,19 @@ func (s *AgentService) poll(ctx context.Context, full bool) {
 	}
 	snap := s.collect()
 	s.mu.Lock()
+	// Compared unfiltered: a hidden agent's change still matters to the tray.
 	same := !full && sameSnapshot(s.last, snap)
 	s.last = snap
+	shown := shownOf(snap, s.cfg.Show)
 	cssChanged := s.checkCSS()
 	s.mu.Unlock()
 
 	app := application.Get()
 	if !same {
 		if s.onSnapshot != nil {
-			s.onSnapshot(snap)
+			s.onSnapshot(snap, shown)
 		}
-		app.Event.Emit("agents", snap)
+		app.Event.Emit("agents", shown)
 	}
 	if cssChanged {
 		app.Event.Emit("css", s.UserCSS())
@@ -659,11 +662,11 @@ func (s *AgentService) Pin(terminal string, pinned bool) error {
 	return err
 }
 
-// Agents returns the latest snapshot (for the first draw).
+// Agents returns the latest snapshot as the page lists it (for the first draw).
 func (s *AgentService) Agents() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.last
+	return shownOf(s.last, s.cfg.Show)
 }
 
 // Focus shows the agent in Herdr: its space and tab, or a peek for a sub-agent.
@@ -692,7 +695,7 @@ func (s *AgentService) Focus(terminal string) error {
 // it shows Herdr's window instead (starting Herdr if needed). For the tray's double click.
 func (s *AgentService) focusFirst() {
 	s.mu.Lock()
-	terminal := firstAgent(s.last)
+	terminal := firstAgent(shownOf(s.last, s.cfg.Show))
 	s.mu.Unlock()
 	var err error
 	if terminal != "" {
@@ -823,6 +826,27 @@ func (s *AgentService) setAutoHide(mode string) {
 	if err != nil {
 		log.Println("save auto_hide:", err)
 	}
+}
+
+// show is the show setting ("all", "active" or "attention").
+func (s *AgentService) show() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cfg.Show
+}
+
+// setShow switches which agents the page lists, saves it in the config file, and
+// redraws the list.
+func (s *AgentService) setShow(mode string) {
+	mode = config.NormalizeShow(mode)
+	s.mu.Lock()
+	s.cfg.Show = mode
+	err := s.cfg.SetValue("show", mode)
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save show:", err)
+	}
+	s.Refresh()
 }
 
 // setStatusMsg turns the agents' status messages on or off, saves it in the

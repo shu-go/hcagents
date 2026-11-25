@@ -53,9 +53,10 @@ Task を使わずに `go build -ldflags "-H windowsgui" .`(Windows)や `go build
 - **⌄**(サブエージェントがある行): サブエージェントを折りたたむ / 開く
 - **ピン**(マウスを乗せると経過時間の位置に出ます): ピン留め / 解除
 - **タイトルバー**: ドラッグで移動。⟳ ですぐに更新、× でウィンドウを隠す
-- **トレイアイコン**: クリックで表示 / 非表示。ダブルクリック(Windows)で、一覧の一番上のエージェントに Herdr を切り替えます(その行をクリックしたのと同じ)。エージェントがいなければ、Herdr のウィンドウを開くだけです。メニューには Show / Hide、Always on top、Theme(System / Light / Dark)、Grow(Upward / Downward)、Auto hide(When no agents / When all idle / Off)、Opacity(100%〜30%)、Status messages、Refresh、Quit があります。
+- **トレイアイコン**: クリックで表示 / 非表示。ダブルクリック(Windows)で、一覧の一番上のエージェントに Herdr を切り替えます(その行をクリックしたのと同じ)。エージェントがいなければ、Herdr のウィンドウを開くだけです。メニューには Show / Hide、Always on top、Theme(System / Light / Dark)、Grow(Upward / Downward)、Auto hide(When no agents / When all idle / Off)、Show(All agents / All but idle / Needs you and done)、Opacity(100%〜30%)、Status messages、Refresh、Quit があります。
 - **ウィンドウの高さ**: 一覧に合わせて、行がちょうど収まる高さに変わります。伸び縮みする向きはトレイメニューの Grow で選べます。上向き(下端を固定)か下向き(上端を固定)です。画面の端まで来るとそれ以上は伸びず、一覧がスクロールします
 - **自動で隠す・表示する**: エージェントがいなくなると(When all idle なら、すべてのエージェントが idle になると)ウィンドウを隠し、そうでなくなるとフォーカスを奪わずに表示します。手で表示・非表示にした場合は、次にこの変化が起きるまでそのままです
+- **表示するエージェント**: 一覧に出すエージェントを、すべて、idle 以外、Needs you と Done だけ、から選べます(トレイメニューの Show)。ピン留めしたエージェントは常に表示します。トレイのバッジとツールチップはすべてのエージェントを数え、自動で隠す・表示する判定は表示中のエージェントで行います
 - **不透明度**: ウィンドウ全体を半透明にできます(トレイメニューの Opacity、100%〜30%)。マウスを乗せている間は不透明になります
 - **ステータスメッセージ**: 各行の下に、エージェントが報告する「いまやっていること」を小さく1行でリアルタイム表示します(Claude Code なら実行中のツールの説明)。トレイメニューの Status messages でオフにできます
 - **トレイのバッジ**: 一番急ぎのグループに応じて、トレイアイコンに丸が付きます。赤(Needs you)、青(Done)、黄(Working)で、すべて Idle なら付きません。ツールチップには件数が出ます(macOS はトレイのツールチップがないため出ません)
@@ -85,6 +86,7 @@ css: user.css     # 自分のスタイルシート。このファイルからの
 theme: system     # 配色。system(OS に合わせる)、light、dark。トレイメニューからも変えられる
 grow: up          # 一覧に合わせて高さを変える向き。up(下端を固定)か down(上端を固定)。トレイメニューからも変えられる
 auto_hide: empty  # ウィンドウを自動で隠す・表示する基準。empty(エージェント0件)、idle(全エージェントが idle)、off。トレイメニューからも変えられる
+show: all         # 一覧に出すエージェント。all(すべて)、active(idle 以外)、attention(Needs you と Done)。ピン留めは常に表示。トレイメニューからも変えられる
 opacity: 100      # ウィンドウ全体の不透明度(%)。30〜100 を 10 刻み。マウスを乗せている間は不透明。トレイメニューからも変えられる
 status_msg: true  # エージェントが自分で報告する「いまやっていること」を各行の下に1行でリアルタイム表示する(Claude Code なら実行中のツールの説明)。トレイメニューからも変えられる
 window:
@@ -95,7 +97,7 @@ window:
 
 macOS で Finder から起動したアプリには、シェルの `PATH` や `HERDR_APP_HOME` が渡りません。`herdr_app`、`hc`、`herdr_home` を設定してください。
 
-トレイメニューでテーマ、伸縮の向き、自動非表示の基準、不透明度、Status messages を選ぶと、使用中の設定ファイルの `theme:`、`grow:`、`auto_hide:`、`opacity:`、`status_msg:` の行だけを書き換えます。設定ファイルがなければ、実行ファイルと同じフォルダに `hcagents.yaml` を作ります(そのフォルダに書き込めないときと macOS では、上の設定フォルダに作ります)。
+トレイメニューでテーマ、伸縮の向き、自動非表示の基準、表示するエージェント、不透明度、Status messages を選ぶと、使用中の設定ファイルの `theme:`、`grow:`、`auto_hide:`、`show:`、`opacity:`、`status_msg:` の行だけを書き換えます。設定ファイルがなければ、実行ファイルと同じフォルダに `hcagents.yaml` を作ります(そのフォルダに書き込めないときと macOS では、上の設定フォルダに作ります)。
 
 ウィンドウの位置とサイズは、`hcagents.yaml` と同じフォルダ(なければ上の設定フォルダ)の `state.yaml` に保存されます。消すと初期状態に戻ります。
 

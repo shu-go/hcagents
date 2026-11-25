@@ -121,9 +121,16 @@ func main() {
 	tray.OnClick(clicks.click)
 	tray.OnDoubleClick(clicks.doubleClick)
 	auto := newAutoShow()
-	svc.onSnapshot = func(snap Snapshot) {
-		trayU.update(trayStateOf(snap))
-		switch auto.next(snap, svc.autoHide()) {
+	autoFor := svc.show()
+	// The tray counts all agents; auto hide goes by the listed ones (show:).
+	svc.onSnapshot = func(all, shown Snapshot) {
+		trayU.update(trayStateOf(all))
+		if s := svc.show(); s != autoFor {
+			// Like an auto hide mode switch, a new filter starts over: picking one
+			// in the tray shouldn't hide the window under the pointer.
+			auto, autoFor = newAutoShow(), s
+		}
+		switch auto.next(shown, svc.autoHide()) {
 		case +1:
 			if !win.IsVisible() {
 				win.Show() // a background app can't take the foreground: no focus theft
@@ -158,6 +165,11 @@ func main() {
 		{"When no agents", config.AutoHideEmpty},
 		{"When all idle", config.AutoHideIdle},
 		{"Off", config.AutoHideOff},
+	})
+	addRadios(menu.AddSubmenu("Show"), cfg.Show, svc.setShow, []radioChoice{
+		{"All agents", config.ShowAll},
+		{"All but idle", config.ShowActive},
+		{"Needs you and done", config.ShowAttention},
 	})
 	var opacities []radioChoice
 	for pct := config.MaxOpacity; pct >= config.MinOpacity; pct -= 10 {

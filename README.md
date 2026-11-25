@@ -61,9 +61,10 @@ Start it and it sits in the corner of your screen and in the system tray.
 - **⌄** (on rows with sub-agents): collapse or expand them
 - **Pin** (on hover, in place of the elapsed time): pin or unpin
 - **Title bar**: drag to move; ⟳ refreshes now; × hides the window
-- **Tray icon**: click to show / hide. Double-click (Windows) to switch Herdr to the agent at the top of the list, as a click on its row does; with no agents, it just opens Herdr's window. The menu has Show / Hide, Always on top, Theme (System / Light / Dark), Grow (Upward / Downward), Auto hide (When no agents / When all idle / Off), Opacity (100% to 30%), Status messages, Refresh and Quit
+- **Tray icon**: click to show / hide. Double-click (Windows) to switch Herdr to the agent at the top of the list, as a click on its row does; with no agents, it just opens Herdr's window. The menu has Show / Hide, Always on top, Theme (System / Light / Dark), Grow (Upward / Downward), Auto hide (When no agents / When all idle / Off), Show (All agents / All but idle / Needs you and done), Opacity (100% to 30%), Status messages, Refresh and Quit
 - **Window height**: follows the list, so the rows just fit. It grows upward (the bottom edge stays) or downward (the top edge stays), as chosen in the tray menu's Grow; at the edge of the screen it stops and the list scrolls
 - **Auto hide**: the window hides itself when there are no agents (or, with When all idle, when every agent is idle) and comes back, without taking the focus, when that changes. A window shown or hidden by hand stays so until the next such change
+- **Show**: which agents are listed: all of them, all but idle ones, or only Needs you and Done (tray menu's Show). Pinned agents are always listed; the tray badge and tooltip still count every agent, while auto hide goes by the listed ones
 - **Opacity**: the whole window can be see-through (tray menu's Opacity, 100% to 30%); it turns opaque while the pointer is over it
 - **Status messages**: under each row, a small line with what the agent says it is doing now (Claude Code: the running tool), updated live. Turn it off with the tray menu's Status messages
 - **Tray badge**: a dot on the tray icon for the most urgent group: red (Needs you), blue (Done) or yellow (Working); none when all are idle. The tooltip has the counts (not on macOS, which has no tray tooltips)
@@ -96,6 +97,7 @@ css: user.css     # your stylesheet, relative to this file; reloaded when it cha
 theme: system     # system (follow the OS), light or dark; also set from the tray menu
 grow: up          # the window's height follows the list: up (bottom edge stays) or down (top edge stays); also set from the tray menu
 auto_hide: empty  # hide/show the window by itself: empty (no agents), idle (all agents idle) or off; also set from the tray menu
+show: all         # agents listed: all, active (all but idle) or attention (Needs you and Done); pinned ones always; also set from the tray menu
 opacity: 100      # the whole window's opacity in percent, 30 to 100 in steps of 10 (opaque while the pointer is over it); also set from the tray menu
 status_msg: true  # a line under each row with what the agent says it is doing now (Claude Code: the running tool), live; also set from the tray menu
 window:
@@ -107,7 +109,7 @@ window:
 On macOS, apps started from Finder don't get your shell's `PATH` or `HERDR_APP_HOME`,
 so set `herdr_app`, `hc` and `herdr_home` there.
 
-Choosing a theme, a grow direction, an auto hide mode, an opacity or Status messages from the tray menu writes `theme:`, `grow:`, `auto_hide:`, `opacity:` or `status_msg:` to the config file in use, changing only that line.
+Choosing a theme, a grow direction, an auto hide mode, which agents to show, an opacity or Status messages from the tray menu writes `theme:`, `grow:`, `auto_hide:`, `show:`, `opacity:` or `status_msg:` to the config file in use, changing only that line.
 With no config file, hcagents creates `hcagents.yaml` next to the executable (or, when that folder can't be written, and on macOS, in the config folder above).
 
 The window's position and size are saved in `state.yaml`, next to `hcagents.yaml`

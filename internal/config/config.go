@@ -42,6 +42,10 @@ type Config struct {
 	// agent goes, show when agents appear), "idle" (hide when all agents are idle,
 	// show when one isn't) or "off". Set from the tray menu too.
 	AutoHide string `yaml:"auto_hide"`
+	// Show is which agents the window lists, by section: "all", "active" (all but
+	// idle) or "attention" (all but idle and working). Pinned agents are always
+	// listed. Set from the tray menu too.
+	Show string `yaml:"show"`
 	// Opacity of the whole window in percent: 30 to 100, in steps of 10. The window
 	// is opaque while the pointer is over it. Set from the tray menu too.
 	Opacity int `yaml:"opacity"`
@@ -70,6 +74,7 @@ func Default() *Config {
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
 		AutoHide:       AutoHideEmpty,
+		Show:           ShowAll,
 		Opacity:        MaxOpacity,
 		StatusMsg:      true,
 		Window: Window{
@@ -122,8 +127,24 @@ func Load() (*Config, error) {
 	cfg.Theme = NormalizeTheme(cfg.Theme)
 	cfg.Grow = NormalizeGrow(cfg.Grow)
 	cfg.AutoHide = NormalizeAutoHide(cfg.AutoHide)
+	cfg.Show = NormalizeShow(cfg.Show)
 	cfg.Opacity = NormalizeOpacity(cfg.Opacity)
 	return cfg, nil
+}
+
+const (
+	ShowAll       = "all"
+	ShowActive    = "active"    // all but idle
+	ShowAttention = "attention" // all but idle and working: Needs you, Done
+)
+
+// NormalizeShow returns "active" or "attention" as they are (any case), else "all".
+func NormalizeShow(s string) string {
+	switch v := strings.ToLower(strings.TrimSpace(s)); v {
+	case ShowActive, ShowAttention:
+		return v
+	}
+	return ShowAll
 }
 
 const (
