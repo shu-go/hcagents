@@ -1,0 +1,134 @@
+/*
+  hcagents sample user stylesheet (experimental): each agent as a square tile.
+  Uses only what the built-in style.css exposes (classes, data-*, variables).
+
+  Use it: in hcagents.yaml (next to it), set
+    css: tiles.css
+  and restart hcagents once; after that, edits here apply on the next refresh.
+
+  A tile:
+    ┌──────────────┐
+    │ [icon] name  │
+    │        place │   (· machine · tab/title, up to three lines)
+    │              │
+    │ ◯       5m   │   (the pin takes the elapsed time's place on hover)
+    └──────────────┘
+  - Tiles fill each section left to right, then wrap. --tile-columns: 1 stacks
+    them in one column instead; --tile-min is the smallest tile width.
+  - Hidden: the section titles (the order and the bar on the left show the
+    group, which counts the sub-agents), and, to fit a square, the status
+    messages (the tooltip has the title) and the sub-agents with their ⌄ toggle.
+*/
+
+:root {
+  --tile-columns: auto-fill;
+  --tile-min: 110px; /* 2 per row in the default 280px window */
+  --tile-gap: 6px;
+  --tile-icon: 22px;
+  --tile-radius: 8px;
+  --tile-bg: color-mix(in srgb, var(--color-fg) 5%, var(--color-bg));
+  --tile-bg-hover: color-mix(in srgb, var(--color-fg) 10%, var(--color-bg));
+}
+
+/* ---- a section: a grid of tiles ---- */
+.group {
+  display: grid;
+  grid-template-columns: repeat(var(--tile-columns), minmax(var(--tile-min), 1fr));
+  gap: var(--tile-gap);
+}
+/* No section titles. The order (pinned, then Needs you → Idle) and the bar's
+   color still tell the groups apart; each group starts a new row. */
+.group-title { display: none; }
+.group { margin-top: var(--tile-gap); }
+.group:first-child { margin-top: 0; }
+
+/* Square tiles get fractional heights, and the window is fitted to whole pixels:
+   a sliver of overflow showed a scrollbar (which then narrowed the tiles).
+   The list still scrolls by wheel when the screen is too short. */
+.agents { scrollbar-width: none; }
+.agents::-webkit-scrollbar { display: none; }
+
+/* ---- the tile ---- */
+.agent-item,
+:root[data-opacity="background"] .agent-item { /* tiles stay opaque: outrank style.css */
+  aspect-ratio: 1;
+  align-self: start; /* not stretched: the ratio sets the height */
+  min-width: 0;
+  overflow: hidden;
+  background: var(--tile-bg);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-idle);
+  border-radius: var(--tile-radius);
+}
+:root[data-opacity="background"] .agent-item + .agent-item { margin-top: 0; }
+.agent-item:hover,
+:root[data-opacity="background"] .agent-item:hover { background: var(--tile-bg-hover); }
+
+/* The bar follows the group (the most urgent of the agent and its sub-agents). */
+.group.is-blocked .agent-item { border-left-color: var(--color-blocked); }
+.group.is-done    .agent-item { border-left-color: var(--color-done); }
+.group.is-working .agent-item { border-left-color: var(--color-working); }
+/* Pinned tiles: by the agent's own status. */
+.group.is-pinned .agent-item.is-blocked { border-left-color: var(--color-blocked); }
+.group.is-pinned .agent-item.is-done    { border-left-color: var(--color-done); }
+.group.is-pinned .agent-item.is-working { border-left-color: var(--color-working); }
+
+/* ---- inside: [icon][name], the place under the name, [status][elapsed/pin] at the bottom ---- */
+.agent {
+  display: grid;
+  grid-template-columns: var(--tile-icon) minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas:
+    "icon   name"
+    ".      place"
+    ".      ."
+    "status elapsed";
+  column-gap: 6px;
+  height: 100%;
+  padding: 8px;
+  border-radius: 0;
+}
+.agent:hover,
+.agent.is-starting { background: none; } /* the whole tile lights up instead */
+.agent.is-starting { opacity: 0.7; }
+
+.agent-icon {
+  grid-area: icon;
+  width: var(--tile-icon);
+  height: var(--tile-icon);
+  border-radius: 5px;
+  font-size: 12px;
+}
+/* The name may take two lines next to the icon. */
+.agent-name {
+  grid-area: name;
+  align-self: center;
+  white-space: normal;
+  overflow-wrap: break-word; /* split a word only when it can't fit at all */
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+/* The place (· machine · tab/title) under the name, up to three lines. */
+.agent-place {
+  grid-area: place;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.agent-status  { grid-area: status;  align-self: center; justify-self: start; order: 0; }
+.agent-elapsed { grid-area: elapsed; align-self: center; justify-self: end; order: 0; }
+.agent-pin     { grid-area: elapsed; align-self: center; justify-self: end; order: 0; }
+
+/* ---- hidden in a tile ---- */
+.agent-toggle,
+.agent-msg,
+.agent-item > .subagents { display: none; }

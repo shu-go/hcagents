@@ -1,6 +1,7 @@
 # hcagents build tasks (https://taskfile.dev, v3).
 #
-#   task            build for this OS (same as `task build`)
+#   task            build for this OS (same as `task build`; also copies
+#                   assets/style.css to styles/default.css)
 #   task run        build and start
 #   task check      gofmt + go vet
 #   task navcheck   check which herdr-app command switches space/tab
@@ -26,7 +27,16 @@ tasks:
   build:
     desc: Build for this OS
     cmds:
+      - task: styles
       - task: build:{{OS}}
+
+  styles:
+    internal: true
+    # A copy of the built-in stylesheet next to the sample user styles, as a
+    # reference to start one from. Overwritten on every build (no sources: a
+    # hand-edited copy is replaced too).
+    cmds:
+      - cmd: '{{if eq OS "windows"}}powershell -NoProfile -Command "New-Item -ItemType Directory -Force styles | Out-Null; Copy-Item -Force assets/style.css styles/default.css"{{else}}mkdir -p styles && cp assets/style.css styles/default.css{{end}}'
 
   icons:
     desc: Make build/windows/icon.ico and build/darwin/icons.icns from build/appicon.png (needs wails3)

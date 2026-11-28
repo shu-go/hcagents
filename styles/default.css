@@ -1,0 +1,396 @@
+/*
+  hcagents built-in style.
+  Override anything in your own CSS (hcagents.yaml: css: user.css).
+
+  Themes: :root holds the dark colors, :root[data-theme="light"] the light ones.
+
+  Structure:
+    html[data-theme="light" | "dark"]
+        [data-opacity="background" | "window"] (below 100%, with --opacity) [data-hover]
+    .app
+      .titlebar  (.titlebar-title .titlebar-source .titlebar-button)
+      .message   (.is-error when something failed)
+      .agents
+        .group.is-pinned | .is-blocked | .is-done | .is-working | .is-idle
+          .group-title (.group-name .group-count)
+          .agent-item.is-<status> [.is-collapsed]
+            .agent.is-<status> [.is-starting] [.is-pinned]
+              .agent-icon   (data-app="claude-code" ..., data-icon="claude" ..., .is-shell)
+                            Herdr's icon, once loaded: .has-image plus
+                            .is-tint     > .icon-glyph  (one-color: drawn in `color`)
+                            .is-picture  > img.icon-image
+                            Without Herdr's icons: a letter, or ">_" for a shell.
+              .agent-name   (space name)
+              .agent-place  (· machine · named tab or the agent's title)
+              .agent-toggle (only with sub-agents)
+              .agent-pin    (pin / unpin; shown on hover)
+              .agent-elapsed
+              .agent-status
+            .agent-msg     (status_msg: the agent's line on what it does now; only when it says one)
+            .subagents                       (sub-agents, drawn as a tree)
+              .subagent-item.is-<status>     (status "none": not an agent, e.g. a shell)
+                .subagent.is-<status> [.is-starting]
+                  .subagent-icon (as .agent-icon) .subagent-name .subagent-status
+                .subagent-msg                (as .agent-msg)
+                .subagents                   (their own sub-agents, nested)
+*/
+
+:root {
+  --color-bg: #1c1c1e;
+  --color-fg: #e6e6e6;
+  --color-muted: #8a8a8e;
+  --color-hover: #2a2a2d;
+  --color-border: #333336;
+
+  --color-blocked: #e5534b;
+  --color-done: #76a8ff;
+  --color-working: #d4a72c;
+  --color-idle: #8a8a8e;
+  --color-tree: #444448;
+  --color-icon: var(--color-fg); /* one-color icons (Herdr draws them in the text color) */
+
+  --font-family: "Geist", "Segoe UI", system-ui, sans-serif;
+  --font-size: 13px;
+  --row-height: 30px;
+  --subrow-height: 26px;
+  --tree-indent: 14px;
+  --radius: 6px;
+
+  color-scheme: dark;
+}
+
+/* Light theme. <html data-theme> is "light" or "dark": the tray menu's choice,
+   or the system's for "System". Override light colors with :root[data-theme="light"]. */
+:root[data-theme="light"] {
+  --color-bg: #f7f7f8;
+  --color-fg: #1f1f22;
+  --color-muted: #6e6e73;
+  --color-hover: #e6e6e9;
+  --color-border: #d6d6db;
+
+  --color-blocked: #cf222e;
+  --color-done: #2f6fde;
+  --color-working: #9a6700;
+  --color-idle: #8a8a8e;
+  --color-tree: #c4c4ca;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+/* The window is transparent: .app paints it (see "opacity" at the end). */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  color: var(--color-fg);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg);
+  /* The window has no DWM rounded corners (main.go): draw them. */
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ---- title bar: drag here to move the window ---- */
+.titlebar {
+  --wails-draggable: drag;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: var(--color-muted);
+}
+.titlebar-title { flex: 1; }
+.titlebar-source { font-size: 11px; }
+.titlebar-button {
+  --wails-draggable: no-drag;
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.titlebar-button:hover { color: var(--color-fg); }
+
+/* ---- message ---- */
+.message { padding: 0 10px; color: var(--color-muted); font-size: 12px; }
+.message:empty { display: none; }
+.message.is-error { color: var(--color-blocked); }
+
+/* ---- list ---- */
+/* Its own height, not the window's: the window is made as tall as this
+   (app.js fitWindow) and it scrolls only when the screen is too short. */
+.agents {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 6px 8px;
+}
+
+.group { margin-top: 8px; }
+.group-title {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.group-count { color: var(--color-muted); margin-left: 4px; }
+
+.group.is-blocked .group-name { color: var(--color-blocked); }
+.group.is-done    .group-name { color: var(--color-done); }
+.group.is-working .group-name { color: var(--color-working); }
+.group.is-idle    .group-name { color: var(--color-idle); }
+
+.agent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--row-height);
+  padding: 0 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.agent:hover { background: var(--color-hover); }
+/* clicked while Herdr wasn't running: until Herdr is up and shows it */
+.agent.is-starting { cursor: progress; background: var(--color-hover); }
+
+.agent-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-border);
+  flex: none;
+}
+.agent-icon[data-app="claude-code"] { background: #d97757; color: #fff; }
+.agent-icon[data-app="copilot"]     { background: #6e40c9; color: #fff; }
+
+.agent-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.agent-place {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-elapsed {
+  color: var(--color-muted);
+  font-size: 12px;
+  flex: none;
+}
+
+.agent-icon.is-shell { background: none; color: var(--color-muted); font-family: monospace; }
+
+/* pin button: replaces the elapsed time while the row is hovered */
+.agent-pin {
+  display: none;
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  flex: none;
+}
+.agent-pin:hover { background: var(--color-hover); color: var(--color-fg); }
+.agent:hover .agent-pin { display: block; }
+.agent:hover .agent-elapsed { display: none; }
+
+.group.is-pinned .group-name { color: var(--color-muted); }
+
+.agent-toggle {
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+  flex: none;
+  transition: transform 0.15s;
+}
+.agent-toggle:hover { color: var(--color-fg); }
+.agent-item.is-collapsed .agent-toggle { transform: rotate(-90deg); }
+.agent-item.is-collapsed > .subagents { display: none; }
+
+/* ---- sub-agents: a tree under their parent ---- */
+.subagents {
+  margin-left: var(--tree-indent);
+}
+.subagent-item {
+  position: relative;
+  padding-left: 16px;
+}
+/* the elbow from the line to this row */
+.subagent-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: calc(var(--subrow-height) / 2);
+  border-left: 1px solid var(--color-tree);
+  border-bottom: 1px solid var(--color-tree);
+  border-bottom-left-radius: 4px;
+}
+/* the line continuing to the next sibling */
+.subagent-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(var(--subrow-height) / 2);
+  bottom: 0;
+  border-left: 1px solid var(--color-tree);
+}
+
+.subagent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--subrow-height);
+  padding: 0 6px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.subagent:hover { background: var(--color-hover); }
+.subagent.is-starting { cursor: progress; background: var(--color-hover); }
+
+.subagent-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--color-border);
+  flex: none;
+}
+.subagent-icon[data-app="claude-code"] { background: #d97757; color: #fff; }
+.subagent-icon[data-app="copilot"]     { background: #6e40c9; color: #fff; }
+.subagent-icon.is-shell { background: none; color: var(--color-muted); font-family: monospace; }
+
+/* shells get a ">_" svg (drawn in the text color) */
+.agent-icon.is-shell,
+.subagent-icon.is-shell { padding: 1px; }
+
+/* Herdr's own icons: no tile, as in Herdr's agents list */
+.agent-icon.has-image,
+.subagent-icon.has-image {
+  background: none;
+  padding: 0;
+  color: var(--color-icon);
+}
+.icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.icon-glyph {
+  width: 100%;
+  height: 100%;
+  background-color: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.subagent-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- status message (status_msg:): one line under the row, lined up with its name ---- */
+.agent-msg,
+.subagent-msg {
+  margin-top: -4px;
+  padding: 0 6px 4px calc(6px + 18px + 8px); /* row padding + icon + gap */
+  color: var(--color-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subagent-msg { margin-top: -3px; padding-left: calc(6px + 16px + 8px); }
+
+/* ---- status mark: a ring; spins while working ---- */
+.agent-status,
+.subagent-status {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-idle);
+  flex: none;
+}
+.subagent-status { width: 8px; height: 8px; }
+.subagent.is-none .subagent-status { visibility: hidden; } /* not an agent */
+
+.agent.is-working .agent-status,
+.subagent.is-working .subagent-status {
+  border-color: var(--color-working);
+  border-right-color: transparent;
+  animation: spin 0.9s linear infinite;
+}
+.agent.is-blocked .agent-status,
+.subagent.is-blocked .subagent-status { border-color: var(--color-blocked); background: var(--color-blocked); }
+.agent.is-done .agent-status,
+.subagent.is-done .subagent-status { border-color: var(--color-done); background: var(--color-done); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- opacity (opacity:, opacity_scope:) ----
+   Below 100%, <html data-opacity="background" | "window"> with --opacity (0.3 to
+   0.9). Opaque all over while the pointer is over the window (<html data-hover>).
+   background: only the background (title bar, section titles, the gaps) shows
+               through; each agent, with its message and sub-agents, stays opaque.
+   window:     all of it, the agents too. */
+.app { transition: background-color 0.15s, opacity 0.15s; }
+
+:root[data-opacity="background"]:not([data-hover]) .app {
+  background: color-mix(in srgb, var(--color-bg) calc(var(--opacity, 1) * 100%), transparent);
+}
+:root[data-opacity="background"] .agent-item {
+  background: var(--color-bg);
+  border-radius: var(--radius);
+}
+:root[data-opacity="background"] .agent-item + .agent-item { margin-top: 2px; }
+/* Text on the see-through background: muted gray got lost on some wallpapers.
+   Full text color, with a halo in the background color. */
+:root[data-opacity="background"] .titlebar,
+:root[data-opacity="background"] .titlebar-button,
+:root[data-opacity="background"] .group-count {
+  color: var(--color-fg);
+}
+:root[data-opacity="background"] .titlebar,
+:root[data-opacity="background"] .message,
+:root[data-opacity="background"] .group-title {
+  text-shadow: 0 0 2px var(--color-bg), 0 0 4px var(--color-bg);
+}
+
+:root[data-opacity="window"]:not([data-hover]) .app { opacity: var(--opacity, 1); }
