@@ -39,13 +39,14 @@ theme: system
 # tray menu (Grow), which saves the choice here.
 grow: up
 
-# The window hides and shows itself:
-#   empty: hide when the last agent goes, show when agents appear again
-#   idle:  hide when all agents are idle, show when one isn't (working, done, needs you)
-#   off:   never
-# A window shown or hidden by hand stays so until the next such change.
+# The window hides itself when its list (as show: below picks it) runs empty,
+# and shows itself, without taking the focus, when agents appear in it again.
+# With show: active it hides when all agents are idle; with show: attention,
+# when nothing needs you or is done. A pinned agent is listed, so it keeps the
+# window up. A window shown or hidden by hand stays so until the next such change.
+# true or false (the older empty and idle read as true, off as false).
 # Also set from the tray menu (Auto hide), which saves the choice here.
-auto_hide: empty
+auto_hide: true
 
 # Which agents the window lists, by section (an agent with a working sub-agent
 # counts as working):

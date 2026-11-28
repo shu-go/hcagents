@@ -806,19 +806,19 @@ func (s *AgentService) setGrow(grow string) {
 	}
 }
 
-// autoHide is the auto_hide setting ("empty", "idle" or "off").
-func (s *AgentService) autoHide() string {
+// autoHide is the auto_hide setting.
+func (s *AgentService) autoHide() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.cfg.AutoHide
+	return bool(s.cfg.AutoHide)
 }
 
-// setAutoHide switches when the window hides and shows itself, and saves it in the config file.
-func (s *AgentService) setAutoHide(mode string) {
-	mode = config.NormalizeAutoHide(mode)
+// setAutoHide turns the window's hiding and showing itself on or off, and saves
+// it in the config file (as true/false, also over an older mode).
+func (s *AgentService) setAutoHide(on bool) {
 	s.mu.Lock()
-	s.cfg.AutoHide = mode
-	err := s.cfg.SetValue("auto_hide", mode)
+	s.cfg.AutoHide = config.AutoHide(on)
+	err := s.cfg.SetValue("auto_hide", strconv.FormatBool(on))
 	s.mu.Unlock()
 	if err != nil {
 		log.Println("save auto_hide:", err)

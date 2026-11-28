@@ -132,8 +132,8 @@ func main() {
 	svc.onSnapshot = func(all, shown Snapshot) {
 		trayU.update(trayStateOf(all))
 		if s := svc.show(); s != autoFor {
-			// Like an auto hide mode switch, a new filter starts over: picking one
-			// in the tray shouldn't hide the window under the pointer.
+			// Like switching auto hide on, a new filter starts over: picking one in
+			// the tray shouldn't hide the window under the pointer.
 			auto, autoFor = newAutoShow(), s
 		}
 		switch auto.next(shown, svc.autoHide()) {
@@ -167,10 +167,9 @@ func main() {
 		{"Upward", config.GrowUp},
 		{"Downward", config.GrowDown},
 	})
-	addRadios(menu.AddSubmenu("Auto hide"), cfg.AutoHide, svc.setAutoHide, []radioChoice{
-		{"When no agents", config.AutoHideEmpty},
-		{"When all idle", config.AutoHideIdle},
-		{"Off", config.AutoHideOff},
+	// Hides the window when the list (as Show picks it) runs empty, shows it again.
+	menu.AddCheckbox("Auto hide", bool(cfg.AutoHide)).OnClick(func(ctx *application.Context) {
+		svc.setAutoHide(ctx.ClickedMenuItem().Checked())
 	})
 	addRadios(menu.AddSubmenu("Show"), cfg.Show, svc.setShow, []radioChoice{
 		{"All agents", config.ShowAll},

@@ -38,10 +38,9 @@ type Config struct {
 	// Grow is the way the window grows and shrinks as its height follows the list:
 	// "up" (the bottom edge stays) or "down" (the top edge stays). Set from the tray menu too.
 	Grow string `yaml:"grow"`
-	// AutoHide hides and shows the window by itself: "empty" (hide when the last
-	// agent goes, show when agents appear), "idle" (hide when all agents are idle,
-	// show when one isn't) or "off". Set from the tray menu too.
-	AutoHide string `yaml:"auto_hide"`
+	// AutoHide hides the window when the list (as Show picks it) runs empty, and
+	// shows it when agents appear in it again. Set from the tray menu too.
+	AutoHide AutoHide `yaml:"auto_hide"`
 	// Show is which agents the window lists, by section: "all", "active" (all but
 	// idle) or "attention" (all but idle and working). Pinned agents are always
 	// listed. Set from the tray menu too.
@@ -76,7 +75,7 @@ func Default() *Config {
 		HiddenInterval: Duration(30 * time.Second),
 		Theme:          ThemeSystem,
 		Grow:           GrowUp,
-		AutoHide:       AutoHideEmpty,
+		AutoHide:       true,
 		Show:           ShowAll,
 		Opacity:        MaxOpacity,
 		OpacityScope:   OpacityBackground,
@@ -130,7 +129,6 @@ func Load() (*Config, error) {
 	}
 	cfg.Theme = NormalizeTheme(cfg.Theme)
 	cfg.Grow = NormalizeGrow(cfg.Grow)
-	cfg.AutoHide = NormalizeAutoHide(cfg.AutoHide)
 	cfg.Show = NormalizeShow(cfg.Show)
 	cfg.Opacity = NormalizeOpacity(cfg.Opacity)
 	cfg.OpacityScope = NormalizeOpacityScope(cfg.OpacityScope)
@@ -178,22 +176,24 @@ func NormalizeOpacity(pct int) int {
 	return max(MinOpacity, min(MaxOpacity, pct))
 }
 
-const (
-	AutoHideOff   = "off"
-	AutoHideEmpty = "empty"
-	AutoHideIdle  = "idle"
-)
+// AutoHide is the auto_hide setting: on or off. It reads true/false and the
+// older modes: "empty" and "idle" are on, "off" is off.
+type AutoHide bool
 
-// NormalizeAutoHide returns "idle" or "off" (also false/no) as they are (any
-// case), else "empty" (also true, from when auto_hide was a yes/no setting).
-func NormalizeAutoHide(s string) string {
-	switch a := strings.ToLower(strings.TrimSpace(s)); a {
-	case AutoHideIdle, AutoHideOff:
-		return a
-	case "false", "no":
-		return AutoHideOff
+func (a *AutoHide) UnmarshalYAML(n *yaml.Node) error {
+	*a = AutoHide(ParseAutoHide(n.Value))
+	return nil
+}
+
+// ParseAutoHide reads an auto_hide value: false/no/off (any case) are off,
+// anything else on (the default). "idle" is on: the Show filter now picks which
+// agents count, so "hide when all are idle" is Show ▸ All but idle.
+func ParseAutoHide(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "false", "no", "off":
+		return false
 	}
-	return AutoHideEmpty
+	return true
 }
 
 const (
