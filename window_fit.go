@@ -16,9 +16,6 @@ const minFitHeight = 40
 type windowFitter struct {
 	win  *application.WebviewWindow
 	grow func() string // config.GrowUp or config.GrowDown
-	// resized, when set, is called after the window was resized (the opacity is
-	// reapplied: Wails resets a layered window's alpha in SetBounds).
-	resized func()
 
 	mu sync.Mutex // one resize at a time (bound calls come on their own goroutines)
 }
@@ -47,9 +44,6 @@ func (f *windowFitter) fit(content, inner int) {
 	nb := fitBounds(b, area, want, f.grow())
 	if nb != b {
 		f.win.SetBounds(nb)
-		if f.resized != nil {
-			f.resized()
-		}
 	}
 }
 

@@ -46,9 +46,12 @@ type Config struct {
 	// idle) or "attention" (all but idle and working). Pinned agents are always
 	// listed. Set from the tray menu too.
 	Show string `yaml:"show"`
-	// Opacity of the whole window in percent: 30 to 100, in steps of 10. The window
-	// is opaque while the pointer is over it. Set from the tray menu too.
+	// Opacity in percent: 30 to 100, in steps of 10. The window is opaque while
+	// the pointer is over it. Set from the tray menu too.
 	Opacity int `yaml:"opacity"`
+	// OpacityScope is what Opacity applies to: "background" (the agents stay
+	// opaque) or "window" (all of it). Set from the tray menu too.
+	OpacityScope string `yaml:"opacity_scope"`
 	// StatusMsg shows each agent's own line on what it does now
 	// (the status report's msg, e.g. Claude Code's running tool) under its row.
 	// Set from the tray menu too.
@@ -76,6 +79,7 @@ func Default() *Config {
 		AutoHide:       AutoHideEmpty,
 		Show:           ShowAll,
 		Opacity:        MaxOpacity,
+		OpacityScope:   OpacityBackground,
 		StatusMsg:      true,
 		Window: Window{
 			Width:       280,
@@ -129,7 +133,21 @@ func Load() (*Config, error) {
 	cfg.AutoHide = NormalizeAutoHide(cfg.AutoHide)
 	cfg.Show = NormalizeShow(cfg.Show)
 	cfg.Opacity = NormalizeOpacity(cfg.Opacity)
+	cfg.OpacityScope = NormalizeOpacityScope(cfg.OpacityScope)
 	return cfg, nil
+}
+
+const (
+	OpacityBackground = "background"
+	OpacityWindow     = "window"
+)
+
+// NormalizeOpacityScope returns "window" as it is (any case), else "background".
+func NormalizeOpacityScope(s string) string {
+	if v := strings.ToLower(strings.TrimSpace(s)); v == OpacityWindow {
+		return v
+	}
+	return OpacityBackground
 }
 
 const (

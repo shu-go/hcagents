@@ -4,7 +4,7 @@
 #   macOS:   ~/Library/Application Support/hcagents/hcagents.yaml
 #   Linux:   ~/.config/hcagents/hcagents.yaml
 # The first one found is used. Changes apply on restart (css: live).
-# hcagents writes to this file itself only for theme:, grow:, auto_hide:, show:, opacity: and status_msg: (the tray menu).
+# hcagents writes to this file itself only for theme:, grow:, auto_hide:, show:, opacity:, opacity_scope: and status_msg: (the tray menu).
 # With no file, it creates one next to the executable.
 
 # herdr-app and hc executables. Empty: looked up in PATH.
@@ -57,9 +57,16 @@ auto_hide: empty
 # Also set from the tray menu (Show), which saves the choice here.
 show: all
 
-# Opacity of the whole window in percent: 30 to 100, in steps of 10. While the
-# pointer is over the window it is fully opaque. Also set from the tray menu (Opacity).
+# Opacity in percent: 30 to 100, in steps of 10. While the pointer is over the
+# window it is fully opaque. Also set from the tray menu (Opacity).
 opacity: 100
+
+# What opacity: applies to:
+#   background: only the background (title bar, section titles, the gaps); the
+#               agents stay opaque
+#   window:     the whole window, the agents too
+# Also set from the tray menu (Opacity), which saves the choice here.
+opacity_scope: background
 
 # Show what each agent says it is doing now, as a small line under
 # its row (live, from herdr-core). What it says depends on the agent: Claude Code

@@ -293,30 +293,48 @@ function setTheme(t) {
   } catch {}
 }
 
+// ---- opacity: the window is transparent; the page paints it (style.css) ----
+// <html data-opacity="background" | "window"> with --opacity (0.3 to 1), only
+// while the level is below 100%; none at 100%. Kept in localStorage like the
+// theme, for the first paint (index.html).
+const OPACITY_KEY = "hcagents.opacity";
+function setOpacity(o) {
+  const level = Number(o?.level) || 100;
+  const scope = o?.scope === "window" ? "window" : "background";
+  const root = document.documentElement;
+  if (level < 100) {
+    root.dataset.opacity = scope;
+    root.style.setProperty("--opacity", String(level / 100));
+  } else {
+    delete root.dataset.opacity;
+    root.style.removeProperty("--opacity");
+  }
+  try {
+    localStorage.setItem(OPACITY_KEY, JSON.stringify({ level, scope }));
+  } catch {}
+}
+
+// <html data-hover> while the pointer is over the window: opaque meanwhile. Not
+// :hover, which stays on when the window hides under the pointer.
+function setHover(on) {
+  if (on) document.documentElement.dataset.hover = "";
+  else delete document.documentElement.dataset.hover;
+}
+document.documentElement.addEventListener("pointerenter", () => setHover(true));
+document.documentElement.addEventListener("pointermove", () => setHover(true));
+document.documentElement.addEventListener("pointerleave", () => setHover(false));
+
 document.querySelector(".refresh-button").addEventListener("click", () => call("Refresh"));
 document.querySelector(".hide-button").addEventListener("click", () => {
   setHover(false);
   wails.Window.Hide();
 });
 
-// The window is opaque while the pointer is over it (opacity:). A move resends
-// now and then: the app forgets the hover when it hides the window itself.
-let hovering = false;
-let hoverSent = 0;
-function setHover(on) {
-  const now = Date.now();
-  if (on === hovering && (!on || now - hoverSent < 1000)) return;
-  hovering = on;
-  hoverSent = now;
-  call("Hover", on).catch(() => {});
-}
-document.documentElement.addEventListener("pointerenter", () => setHover(true));
-document.documentElement.addEventListener("pointermove", () => setHover(true));
-document.documentElement.addEventListener("pointerleave", () => setHover(false));
-
 wails.Events.On("agents", (ev) => render(ev.data));
 wails.Events.On("css", (ev) => setCSS(ev.data));
 wails.Events.On("theme", (ev) => setTheme(ev.data));
+wails.Events.On("opacity", (ev) => setOpacity(ev.data));
+wails.Events.On("hidden", () => setHover(false)); // the app hid the window
 
 // Elapsed times keep moving between refreshes.
 setInterval(() => last && render(last), 30000);
@@ -326,4 +344,5 @@ document.fonts?.ready.then(fitWindow);
 
 call("UserCSS").then(setCSS);
 call("Theme").then(setTheme);
+call("Opacity").then(setOpacity);
 call("Agents").then((snap) => snap && snap.at && render(snap));

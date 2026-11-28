@@ -63,23 +63,29 @@ func main() {
 		Frameless:   true,
 		AlwaysOnTop: cfg.Window.AlwaysOnTop,
 		URL:         "/",
+		// The window is transparent and the page paints it, opaque or see-through
+		// (opacity:, opacity_scope:; style.css), so a switch needs no restart.
+		BackgroundType: application.BackgroundTypeTransparent,
 		Windows: application.WindowsWindow{
 			HiddenOnTaskbar: true,
+			// Wails' frameless decorations (DWM shadow, rounded corners) put an
+			// opaque white surface under the page on Windows 11: nothing showed
+			// through. style.css rounds the corners itself instead.
+			DisableFramelessWindowDecorations: true,
+		},
+		Mac: application.MacWindow{
+			Backdrop: application.MacBackdropTransparent,
 		},
 	}
 	statePath := cfg.StatePath()
 	applySavedBounds(statePath, &winOpts) // where it was last time
 	win = app.Window.NewWithOptions(winOpts)
 
-	// The window's opacity (opacity:), full while the pointer is over it.
-	opacity := &opacityCtl{win: win, level: cfg.Opacity}
-	svc.onOpacity = opacity.set
-	svc.onHover = opacity.setHover
-	win.OnWindowEvent(events.Common.WindowRuntimeReady, func(*application.WindowEvent) { opacity.apply() })
-	// hide hides the window. The pointer may leave it without the page noticing.
+	// hide hides the window. The pointer may leave it without the page noticing,
+	// which then stays opaque (hovered) until the pointer comes back: tell it.
 	hide := func() {
 		win.Hide()
-		opacity.setHover(false)
+		app.Event.Emit("hidden")
 	}
 
 	// Closing the window hides it; quit from the tray.
@@ -90,7 +96,7 @@ func main() {
 
 	ws := trackWindowState(app, win, statePath)
 	// The window's height follows the list (the page asks with FitHeight).
-	fitter := &windowFitter{win: win, grow: svc.grow, resized: opacity.apply}
+	fitter := &windowFitter{win: win, grow: svc.grow}
 	svc.onFit = fitter.fit
 	svc.visible = win.IsVisible
 
@@ -175,10 +181,16 @@ func main() {
 	for pct := config.MaxOpacity; pct >= config.MinOpacity; pct -= 10 {
 		opacities = append(opacities, radioChoice{strconv.Itoa(pct) + "%", strconv.Itoa(pct)})
 	}
-	addRadios(menu.AddSubmenu("Opacity"), strconv.Itoa(cfg.Opacity), func(v string) {
+	opacityMenu := menu.AddSubmenu("Opacity")
+	addRadios(opacityMenu, strconv.Itoa(cfg.Opacity), func(v string) {
 		pct, _ := strconv.Atoi(v)
 		svc.setOpacity(pct)
 	}, opacities)
+	opacityMenu.AddSeparator() // a second radio group: what the level applies to
+	addRadios(opacityMenu, cfg.OpacityScope, svc.setOpacityScope, []radioChoice{
+		{"Background only", config.OpacityBackground},
+		{"Whole window", config.OpacityWindow},
+	})
 	menu.AddCheckbox("Status messages", cfg.StatusMsg).OnClick(func(ctx *application.Context) {
 		svc.setStatusMsg(ctx.ClickedMenuItem().Checked())
 	})

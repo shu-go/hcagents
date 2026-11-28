@@ -6,6 +6,7 @@
 
   Structure:
     html[data-theme="light" | "dark"]
+        [data-opacity="background" | "window"] (below 100%, with --opacity) [data-hover]
     .app
       .titlebar  (.titlebar-title .titlebar-source .titlebar-button)
       .message   (.is-error when something failed)
@@ -78,10 +79,11 @@
 
 * { box-sizing: border-box; }
 
+/* The window is transparent: .app paints it (see "opacity" at the end). */
 html, body {
   margin: 0;
   height: 100%;
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-fg);
   font-family: var(--font-family);
   font-size: var(--font-size);
@@ -94,6 +96,10 @@ html, body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--color-bg);
+  /* The window has no DWM rounded corners (main.go): draw them. */
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 /* ---- title bar: drag here to move the window ---- */
@@ -357,3 +363,34 @@ html, body {
 .subagent.is-done .subagent-status { border-color: var(--color-done); background: var(--color-done); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- opacity (opacity:, opacity_scope:) ----
+   Below 100%, <html data-opacity="background" | "window"> with --opacity (0.3 to
+   0.9). Opaque all over while the pointer is over the window (<html data-hover>).
+   background: only the background (title bar, section titles, the gaps) shows
+               through; each agent, with its message and sub-agents, stays opaque.
+   window:     all of it, the agents too. */
+.app { transition: background-color 0.15s, opacity 0.15s; }
+
+:root[data-opacity="background"]:not([data-hover]) .app {
+  background: color-mix(in srgb, var(--color-bg) calc(var(--opacity, 1) * 100%), transparent);
+}
+:root[data-opacity="background"] .agent-item {
+  background: var(--color-bg);
+  border-radius: var(--radius);
+}
+:root[data-opacity="background"] .agent-item + .agent-item { margin-top: 2px; }
+/* Text on the see-through background: muted gray got lost on some wallpapers.
+   Full text color, with a halo in the background color. */
+:root[data-opacity="background"] .titlebar,
+:root[data-opacity="background"] .titlebar-button,
+:root[data-opacity="background"] .group-count {
+  color: var(--color-fg);
+}
+:root[data-opacity="background"] .titlebar,
+:root[data-opacity="background"] .message,
+:root[data-opacity="background"] .group-title {
+  text-shadow: 0 0 2px var(--color-bg), 0 0 4px var(--color-bg);
+}
+
+:root[data-opacity="window"]:not([data-hover]) .app { opacity: var(--opacity, 1); }

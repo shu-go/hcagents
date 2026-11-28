@@ -94,9 +94,6 @@ type AgentService struct {
 	onFit func(content, inner int)
 	// visible, when set, tells whether the window is shown (for the refresh interval).
 	visible func() bool
-	// onOpacity and onHover, when set, change the window's opacity (opacityCtl).
-	onOpacity func(pct int)
-	onHover   func(over bool)
 }
 
 type since struct {
@@ -862,7 +859,26 @@ func (s *AgentService) setStatusMsg(on bool) {
 	s.Refresh()
 }
 
-// setOpacity switches the window's opacity (percent) and saves it in the config file.
+// OpacityView is how see-through the page draws itself (opacity:, opacity_scope:).
+type OpacityView struct {
+	Level int    `json:"level"` // percent, 30 to 100
+	Scope string `json:"scope"` // "background" or "window"
+}
+
+// Opacity returns the opacity settings. The window itself is always transparent;
+// the page paints it at this level (style.css), opaque while the pointer is over it.
+func (s *AgentService) Opacity() OpacityView {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return OpacityView{Level: s.cfg.Opacity, Scope: s.cfg.OpacityScope}
+}
+
+// emitOpacity tells the page the opacity settings (the "opacity" event).
+func (s *AgentService) emitOpacity() {
+	application.Get().Event.Emit("opacity", s.Opacity())
+}
+
+// setOpacity switches the opacity (percent) and saves it in the config file.
 func (s *AgentService) setOpacity(pct int) {
 	pct = config.NormalizeOpacity(pct)
 	s.mu.Lock()
@@ -872,16 +888,21 @@ func (s *AgentService) setOpacity(pct int) {
 	if err != nil {
 		log.Println("save opacity:", err)
 	}
-	if s.onOpacity != nil {
-		s.onOpacity(pct)
-	}
+	s.emitOpacity()
 }
 
-// Hover tells whether the pointer is over the page: the window is opaque meanwhile.
-func (s *AgentService) Hover(over bool) {
-	if s.onHover != nil {
-		s.onHover(over)
+// setOpacityScope switches what the opacity applies to ("background" or
+// "window") and saves it in the config file.
+func (s *AgentService) setOpacityScope(scope string) {
+	scope = config.NormalizeOpacityScope(scope)
+	s.mu.Lock()
+	s.cfg.OpacityScope = scope
+	err := s.cfg.SetValue("opacity_scope", scope)
+	s.mu.Unlock()
+	if err != nil {
+		log.Println("save opacity_scope:", err)
 	}
+	s.emitOpacity()
 }
 
 // UserCSS returns the user's stylesheet ("" if none).

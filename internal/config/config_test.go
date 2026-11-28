@@ -11,3 +11,13 @@ func TestNormalizeOpacity(t *testing.T) {
 		}
 	}
 }
+
+func TestNormalizeOpacityScope(t *testing.T) {
+	for in, want := range map[string]string{
+		"": "background", "background": "background", "Window": "window", " window ": "window", "x": "background",
+	} {
+		if got := NormalizeOpacityScope(in); got != want {
+			t.Errorf("NormalizeOpacityScope(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
