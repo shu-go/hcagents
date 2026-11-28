@@ -365,7 +365,7 @@ html, body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- opacity (opacity:, opacity_scope:) ----
-   Below 100%, <html data-opacity="background" | "window"> with --opacity (0.3 to
+   Below 100%, <html data-opacity="background" | "window"> with --opacity (0 to
    0.9). Opaque all over while the pointer is over the window (<html data-hover>).
    background: only the background (title bar, section titles, the gaps) shows
                through; each agent, with its message and sub-agents, stays opaque.

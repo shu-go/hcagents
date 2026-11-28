@@ -295,12 +295,14 @@ function setTheme(t) {
 }
 
 // ---- opacity: the window is transparent; the page paints it (style.css) ----
-// <html data-opacity="background" | "window"> with --opacity (0.3 to 1), only
+// <html data-opacity="background" | "window"> with --opacity (0 to 0.9), only
 // while the level is below 100%; none at 100%. Kept in localStorage like the
 // theme, for the first paint (index.html).
 const OPACITY_KEY = "hcagents.opacity";
 function setOpacity(o) {
-  const level = Number(o?.level) || 100;
+  // Not `|| 100`: 0% is a level too.
+  const n = Number(o?.level);
+  const level = Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100;
   const scope = o?.scope === "window" ? "window" : "background";
   const root = document.documentElement;
   if (level < 100) {

@@ -46,7 +46,7 @@ type Config struct {
 	// idle) or "attention" (all but idle and working). Pinned agents are always
 	// listed. Set from the tray menu too.
 	Show string `yaml:"show"`
-	// Opacity in percent: 30 to 100, in steps of 10. The window is opaque while
+	// Opacity in percent: 0 to 100, in steps of 10. The window is opaque while
 	// the pointer is over it. Set from the tray menu too.
 	Opacity int `yaml:"opacity"`
 	// OpacityScope is what Opacity applies to: "background" (the agents stay
@@ -166,7 +166,9 @@ func NormalizeShow(s string) string {
 }
 
 const (
-	MinOpacity = 30 // lower and the window is hard to find
+	// 0: nothing but the agents (background) or nothing at all (window) shows
+	// until the pointer is over the window, which turns it opaque.
+	MinOpacity = 0
 	MaxOpacity = 100
 )
 

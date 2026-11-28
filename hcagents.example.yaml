@@ -57,8 +57,10 @@ auto_hide: empty
 # Also set from the tray menu (Show), which saves the choice here.
 show: all
 
-# Opacity in percent: 30 to 100, in steps of 10. While the pointer is over the
-# window it is fully opaque. Also set from the tray menu (Opacity).
+# Opacity in percent: 0 to 100, in steps of 10. While the pointer is over the
+# window it is fully opaque. At 0, only the agents show (opacity_scope:
+# background), or nothing until the pointer is over the window (window).
+# Also set from the tray menu (Opacity).
 opacity: 100
 
 # What opacity: applies to:
