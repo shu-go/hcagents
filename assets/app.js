@@ -187,8 +187,9 @@ function renderAgent(a, now, canPin) {
   $row.title = [a.title, a.terminal].filter(Boolean).join("\n");
 
   if (a.pinned) $row.classList.add("is-pinned");
-  // detail: a named tab, else the agent's title (as Herdr shows it)
-  const place = [a.machine, a.detail].filter(Boolean).map((s) => `· ${s}`).join(" ");
+  // detail: a named tab, else the agent's title (as Herdr shows it). No "·"
+  // separators: the row's gap and the muted color set it apart from the name.
+  const place = [a.machine, a.detail].filter(Boolean).join(" ");
   $row.append(icon("agent-icon", a), el("span", "agent-name", a.space), el("span", "agent-place", place));
 
   const hasChildren = a.children && a.children.length > 0;

@@ -21,7 +21,7 @@
                             .is-picture  > img.icon-image
                             Without Herdr's icons: a letter, or ">_" for a shell.
               .agent-name   (space name)
-              .agent-place  (· machine · named tab or the agent's title)
+              .agent-place  (machine, named tab or the agent's title)
               .agent-toggle (only with sub-agents)
               .agent-pin    (pin / unpin; shown on hover)
               .agent-elapsed

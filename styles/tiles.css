@@ -9,7 +9,7 @@
   A tile:
     ┌──────────────┐
     │ [icon] name  │
-    │        place │   (· machine · tab/title, up to three lines)
+    │        place │   (machine, tab/title; up to three lines)
     │              │
     │ ◯       5m   │   (the pin takes the elapsed time's place on hover)
     └──────────────┘
@@ -111,7 +111,7 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
-/* The place (· machine · tab/title) under the name, up to three lines. */
+/* The place (machine, tab/title) under the name, up to three lines. */
 .agent-place {
   grid-area: place;
   margin-top: 2px;
